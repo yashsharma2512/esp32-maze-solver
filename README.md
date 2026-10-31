@@ -10,11 +10,12 @@ tests, not the complete maze-solving firmware.
 | --- | --- |
 | `tests/TCA_MPU_Test/TCA_MPU_Test.ino` | Scan I2C, verify TCA9548A channel control, identify an MPU6050 or MPU6500, and print acceleration and angular velocity. |
 | `tests/Motor_Test/Motor_Test.ino` | Test each motor forward/reverse, both motors together, and left/right pivots. Uses the maze sketch's `setMotorIOs()` and `moveMotor(left, right)` interface. |
+| `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
 the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. They have not been
-compiled or run on hardware by the author of these test files.
+use the ESP32 Arduino board package's built-in libraries. All three sketches
+compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
 
 ## I2C wiring
 
@@ -47,6 +48,22 @@ The reported hardware output showed the sensor at bus address `0x68` returning
 `0x68`. The updated test supports both identities and repeats the identity read
 before configuring the device. Identity alone does not establish full sensor
 health: move/rotate the board and inspect the changing readings.
+
+## AS5600 encoder wiring and test
+
+Both AS5600 sensors use I2C address `0x36`, so connect them to separate TCA9548A
+channels. Use the main I2C wiring above (`GPIO21` SDA, `GPIO22` SCL), with the
+**left encoder on TCA channel 5** and **right encoder on channel 4**. The encoder
+test does not enable the motors. Turn each wheel by hand while watching Serial
+Monitor at 115200 baud.
+
+At startup the test scans all eight mux channels, then tares each encoder so its
+`tared_angle` and `total` begin near zero. `raw` remains the sensor's absolute
+0–4095 reading. Send `z` to tare both again. The output also shows per-sample
+`delta`, RPM, status, AGC, magnetic magnitude, and a magnet strength label. If
+`magnet=TOO WEAK` persists, check magnet type, centering, and air gap before
+using the readings for distance control. The revised magnetic diagnostics are
+compile-checked but have not yet been validated from a live serial log.
 
 ## Motor wiring
 
@@ -84,4 +101,5 @@ encoder feedback or automatic confirmation that the wheels moved correctly.
 - [ESP32-DevKitC pin reference](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32/esp32-devkitc/user_guide.html)
 - [TCA9548A datasheet](https://www.ti.com/lit/ds/symlink/tca9548a.pdf)
 - [MPU6500 register map](https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6500-Register-Map2.pdf)
+- [AS5600 datasheet](https://www.mouser.com/datasheet/2/588/AMS_AS5600_Datasheet_EN_v1-372293.pdf)
 - [TB6612FNG hookup guide](https://learn.sparkfun.com/tutorials/tb6612fng-hookup-guide/all?print=1)
