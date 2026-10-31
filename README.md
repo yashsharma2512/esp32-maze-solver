@@ -11,10 +11,11 @@ tests, not the complete maze-solving firmware.
 | `tests/TCA_MPU_Test/TCA_MPU_Test.ino` | Scan I2C, verify TCA9548A channel control, identify an MPU6050 or MPU6500, and print acceleration and angular velocity. |
 | `tests/Motor_Test/Motor_Test.ino` | Test each motor forward/reverse, both motors together, and left/right pivots. Uses the maze sketch's `setMotorIOs()` and `moveMotor(left, right)` interface. |
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
+| `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
 the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. All three sketches
+use the ESP32 Arduino board package's built-in libraries. All four sketches
 compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
 
 ## I2C wiring
@@ -48,6 +49,22 @@ The reported hardware output showed the sensor at bus address `0x68` returning
 `0x68`. The updated test supports both identities and repeats the identity read
 before configuring the device. Identity alone does not establish full sensor
 health: move/rotate the board and inspect the changing readings.
+
+## APDS-9960 proximity test on channel 0
+
+Connect the APDS-9960 SDA/SCL to the TCA9548A's **SD0/SC0** outputs, with
+3.3 V compatible power and common ground. The TCA main bus stays on ESP32
+GPIO21/GPIO22 as above. This standalone test uses the original
+`MAZESOLVER/proximity.ino` register settings and smoothing factor `alpha = 0.65`.
+Keep the motors off, upload the sketch, and move a hand toward and away from
+the sensor. Serial Monitor at 115200 baud prints `CH0 raw` (0–255) and
+`filtered` values every 100 ms. The raw reading should respond to the motion;
+filtered readings respond more gradually. Live channel-0 readings are not yet
+verified in this repo.
+
+The original sketch combines two bytes starting at `PDATA` (`0x9C`), but
+proximity data is one byte. The test reads only that byte so the adjacent
+register cannot alter the reported value.
 
 ## AS5600 encoder wiring and test
 
@@ -102,4 +119,5 @@ encoder feedback or automatic confirmation that the wheels moved correctly.
 - [TCA9548A datasheet](https://www.ti.com/lit/ds/symlink/tca9548a.pdf)
 - [MPU6500 register map](https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6500-Register-Map2.pdf)
 - [AS5600 datasheet](https://www.mouser.com/datasheet/2/588/AMS_AS5600_Datasheet_EN_v1-372293.pdf)
+- [APDS-9960 datasheet](https://cdn.sparkfun.com/assets/learn_tutorials/3/2/1/Avago-APDS-9960-datasheet.pdf)
 - [TB6612FNG hookup guide](https://learn.sparkfun.com/tutorials/tb6612fng-hookup-guide/all?print=1)
