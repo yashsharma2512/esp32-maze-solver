@@ -19,9 +19,11 @@ constexpr int BASE_PWM = 70;
 constexpr int MAX_STEERING = 25;
 constexpr uint32_t CONTROL_MS = 20;
 constexpr uint32_t PRINT_MS = 100;
-constexpr uint32_t MAX_RUN_MS = 2000;
+constexpr uint32_t MAX_RUN_MS = 10000;
 
 bool apdsReady = false, sampleOK = false, haveFilter = false, running = false;
+bool filterResetPending = false;
+const char *lastStopReason = "none";
 uint8_t raw = 0, statusReg = 0;
 float filtered = 0.0f, previousError = 0.0f, errorNow = 0.0f;
 int leftCommand = 0, rightCommand = 0;
@@ -88,17 +90,27 @@ bool initAPDS() {
 }
 
 bool updateAPDS() {
-  if (!selectChannel0()) return false;
-  if (!readRegister(0x93, statusReg) || !readRegister(0x9C, raw)) return false;
+  if (!selectChannel0() ||
+      !readRegister(0x93, statusReg) ||
+      !readRegister(0x9C, raw)) {
+    filterResetPending = true;
+    return false;
+  }
   bool saturated = (statusReg & 0x40) != 0;
-  // Every successful PDATA read updates the filter; PVALID is not a run gate.
-  filtered = haveFilter ? FILTER_ALPHA * filtered +
-                          (1.0f - FILTER_ALPHA) * raw : raw;
+  if (saturated) {
+    // Show the current raw count, but do not blend this sample into steering.
+    filtered = raw;
+    filterResetPending = true;
+    clearProximityFlag(); // PGSAT is sticky until PICLEAR.
+    return false;
+  }
+  // PVALID is informational only; a successful PDATA read is used here.
+  filtered = (!haveFilter || filterResetPending) ? raw :
+      FILTER_ALPHA * filtered + (1.0f - FILTER_ALPHA) * raw;
   haveFilter = true;
+  filterResetPending = false;
   lastReadMs = millis();
-  // Clear the sticky flag so the next cycle reveals current saturation.
-  if (saturated && !clearProximityFlag()) return false;
-  return !saturated;
+  return true;
 }
 
 void stopMotors() {
@@ -140,9 +152,13 @@ void moveMotor(int left, int right) {
 
 void stopRun(const char *reason) {
   stopMotors();
-  if (running) Serial.printf("STOP: %s\n", reason);
+  if (running) {
+    lastStopReason = reason;
+    Serial.printf("STOP: %s\n", reason);
+  }
   running = false;
   previousError = 0.0f;
+  errorNow = 0.0f;
 }
 
 void startRun() {
@@ -157,12 +173,14 @@ void startRun() {
         : "START BLOCKED: APDS CH0 I2C read failed.");
     return;
   }
-  targetReading = filtered; // Hold the distance chosen when the test starts.
+  targetReading = raw; // Capture the current clean count, not a stale filter.
+  filtered = raw;
+  lastStopReason = "none";
   previousError = 0.0f;
   errorNow = 0.0f;
   runStartMs = millis();
   running = true;
-  Serial.printf("START: 2 s max, target=%.1f, base PWM=%d\n",
+  Serial.printf("START: 10 s max, target=%.1f, base PWM=%d\n",
                 targetReading, BASE_PWM);
 }
 
@@ -172,7 +190,7 @@ void setup() {
   delay(500);
   Serial.println("\nLEFT WALL TRACK TEST | ESP32 | APDS on TCA CH0");
   Serial.println("Place robot at the desired distance from a straight LEFT wall.");
-  Serial.println("Press BOOT after startup or send s for a 2-second run; press BOOT again or send x to stop.");
+  Serial.println("Press BOOT after startup or send s for a 10-second run; press BOOT again or send x to stop.");
   pinMode(BUTTON_GPIO, INPUT_PULLUP);
   Wire.begin(SDA_PIN, SCL_PIN, 100000);
   Wire.setTimeOut(30);
@@ -199,7 +217,7 @@ void loop() {
   }
 
   uint32_t now = millis();
-  if (running && now - runStartMs >= MAX_RUN_MS) stopRun("2-second limit");
+  if (running && now - runStartMs >= MAX_RUN_MS) stopRun("10-second limit");
 
   if (now - lastControlMs >= CONTROL_MS) {
     lastControlMs = now;
@@ -222,10 +240,10 @@ void loop() {
 
   if (now - lastPrintMs >= PRINT_MS) {
     lastPrintMs = now;
-    Serial.printf("%s CH0 raw=%3u filtered=%6.1f saturated=%u read_ok=%u error=%+6.1f L=%3d R=%3d\n",
+    Serial.printf("%s CH0 raw=%3u filtered=%6.1f saturated=%u read_ok=%u target=%5.1f error=%+6.1f L=%3d R=%3d last_stop=%s\n",
                   running ? "RUN " : "IDLE", raw, filtered,
-                  !!(statusReg & 0x40), sampleOK,
-                  errorNow, leftCommand, rightCommand);
+                  !!(statusReg & 0x40), sampleOK, targetReading,
+                  errorNow, leftCommand, rightCommand, lastStopReason);
   }
   delay(1);
 }
