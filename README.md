@@ -13,11 +13,12 @@ tests, not the complete maze-solving firmware.
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 | `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
 | `tests/Unified_Robot_Test/Unified_Robot_Test.ino` | Test documented motors, IMU, APDS sensors, and encoders together, with USB Serial and a local Wi-Fi dashboard. |
-| `tests/Left_Wall_Follow_Test/Left_Wall_Follow_Test.ino` | Run a bounded straight left-wall tracking test with APDS on TCA channel 0 and the documented motor pins. |
+| `tests/Left_Wall_Follow_Test/Left_Wall_Follow_Test.ino` | Run continuous straight left-wall tracking with APDS on TCA channel 0 and the documented motor pins. |
+| `tests/Tile_Move_Test/Tile_Move_Test.ino` | Move forward or backward one encoder-measured 300 mm tile per command. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
 the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. All six sketches
+use the ESP32 Arduino board package's built-in libraries. All seven sketches
 compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
 
 ## I2C wiring
@@ -77,6 +78,22 @@ captures the current raw count as its target, then follows the straight wall
 until BOOT, `x`, saturation, or an I2C error stops it. There is no run timer. It does not gate on PVALID or a fixed proximity count.
 Press BOOT after startup or send `s` on USB Serial to start; BOOT or `x` stops it.
 Idle output repeats the last stop reason. There is no front-wall or corner detection in this test.
+
+## One tile movement test
+
+The [one tile test](tests/Tile_Move_Test/README.md) is a separate sketch. It uses
+70 mm wheels, a 300 mm tile length, the documented motor pins, and AS5600
+encoders on TCA channels 5 (left) and 4 (right). Send `g` for one tile forward,
+`b` for one tile backward, or `x` to stop; BOOT starts or stops a forward move.
+Each move tares both encoders before driving. Verify wheel direction and encoder
+movement with the wheels lifted before testing on the floor.
+
+The robot's reported APDS map for future navigation is **left channel 0, right
+channel 1, front channel 7**. The original firmware expects four APDS readings,
+including two front sensors, so its navigation logic needs adaptation to this
+three-sensor layout. Its `dfs()` function is currently a TODO. A DFS search will
+need reliable tile moves, calibrated wall thresholds, and measured 90-degree
+turns before it can safely explore and backtrack.
 
 ## Unified robot test and Wi-Fi dashboard
 
