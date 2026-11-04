@@ -13,10 +13,11 @@ tests, not the complete maze-solving firmware.
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 | `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
 | `tests/Unified_Robot_Test/Unified_Robot_Test.ino` | Test documented motors, IMU, APDS sensors, and encoders together, with USB Serial and a local Wi-Fi dashboard. |
+| `tests/Left_Wall_Follow_Test/Left_Wall_Follow_Test.ino` | Run a bounded straight left-wall tracking test with APDS on TCA channel 0 and the documented motor pins. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
 the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. All five sketches
+use the ESP32 Arduino board package's built-in libraries. All six sketches
 compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
 
 ## I2C wiring
@@ -67,6 +68,14 @@ sensor orientation before using them for wall thresholds.
 The original sketch combines two bytes starting at `PDATA` (`0x9C`), but
 proximity data is one byte. The test reads only that byte so the adjacent
 register cannot alter the reported value.
+
+## Left wall tracking test
+
+The [left-wall test](tests/Left_Wall_Follow_Test/README.md) uses APDS channel 0
+and the documented motor pins. It waits for a valid left-wall reading, captures
+the starting distance as its target, then follows a straight wall for up to two
+seconds. Press BOOT after startup or send `s` on USB Serial to start; BOOT or
+`x` stops it. There is no front-wall or corner detection in this test.
 
 ## Unified robot test and Wi-Fi dashboard
 
