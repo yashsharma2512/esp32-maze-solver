@@ -13,7 +13,6 @@ constexpr int BUTTON_GPIO = 0; // Onboard BOOT button, press only after power-up
 // Original control shape: filtered left value - target, then P + D.
 constexpr float FILTER_ALPHA = 0.65f; // Original proximity smoothing.
 float targetReading = 50.0f; // Captured at start; original leftWallOffset was 50.
-constexpr float MIN_WALL_READING = 25.0f; // Original wallSense.
 constexpr float KP = 0.85f, KD = 1.5f; // Original config_lolins2 gains.
 // First movement test uses a slower base and smaller steering correction.
 constexpr int BASE_PWM = 70;
@@ -22,12 +21,11 @@ constexpr uint32_t CONTROL_MS = 20;
 constexpr uint32_t PRINT_MS = 100;
 constexpr uint32_t MAX_RUN_MS = 2000;
 
-bool apdsReady = false, sampleValid = false, haveFilter = false, running = false;
+bool apdsReady = false, sampleOK = false, haveFilter = false, running = false;
 uint8_t raw = 0, statusReg = 0;
 float filtered = 0.0f, previousError = 0.0f, errorNow = 0.0f;
 int leftCommand = 0, rightCommand = 0;
-uint8_t lowWallSamples = 0;
-uint32_t lastControlMs = 0, lastPrintMs = 0, lastValidMs = 0, runStartMs = 0;
+uint32_t lastControlMs = 0, lastPrintMs = 0, lastReadMs = 0, runStartMs = 0;
 
 bool ping(uint8_t addr) {
   Wire.beginTransmission(addr);
@@ -92,19 +90,15 @@ bool initAPDS() {
 bool updateAPDS() {
   if (!selectChannel0()) return false;
   if (!readRegister(0x93, statusReg) || !readRegister(0x9C, raw)) return false;
-  bool converted = (statusReg & 0x02) != 0;
   bool saturated = (statusReg & 0x40) != 0;
-  // Keep telemetry current even if a saturated sample is unsafe for steering.
-  if (converted) {
-    filtered = haveFilter ? FILTER_ALPHA * filtered +
-                            (1.0f - FILTER_ALPHA) * raw : raw;
-    haveFilter = true;
-    lastValidMs = millis();
-  }
-  // Clear the sticky flag so the next cycle can reveal whether saturation
-  // is still happening at the current wall distance.
+  // Every successful PDATA read updates the filter; PVALID is not a run gate.
+  filtered = haveFilter ? FILTER_ALPHA * filtered +
+                          (1.0f - FILTER_ALPHA) * raw : raw;
+  haveFilter = true;
+  lastReadMs = millis();
+  // Clear the sticky flag so the next cycle reveals current saturation.
   if (saturated && !clearProximityFlag()) return false;
-  return converted && !saturated;
+  return !saturated;
 }
 
 void stopMotors() {
@@ -153,25 +147,19 @@ void stopRun(const char *reason) {
 
 void startRun() {
   if (running) return;
-  if (!apdsReady || !haveFilter || millis() - lastValidMs > 100) {
-    Serial.println("START BLOCKED: APDS CH0 has no fresh converted reading.");
+  if (!apdsReady || !haveFilter || millis() - lastReadMs > 100) {
+    Serial.println("START BLOCKED: APDS CH0 has no fresh I2C reading.");
     return;
   }
-  if (!sampleValid) {
+  if (!sampleOK) {
     Serial.println((statusReg & 0x40)
         ? "START BLOCKED: saturation flag was cleared; wait for the next sample."
-        : "START BLOCKED: APDS CH0 read failed or conversion is invalid.");
-    return;
-  }
-  if (filtered < MIN_WALL_READING) {
-    Serial.printf("START BLOCKED: left wall reading %.1f < %.1f. Check VL/PS and sensor direction.\n",
-                  filtered, MIN_WALL_READING);
+        : "START BLOCKED: APDS CH0 I2C read failed.");
     return;
   }
   targetReading = filtered; // Hold the distance chosen when the test starts.
   previousError = 0.0f;
   errorNow = 0.0f;
-  lowWallSamples = 0;
   runStartMs = millis();
   running = true;
   Serial.printf("START: 2 s max, target=%.1f, base PWM=%d\n",
@@ -215,15 +203,9 @@ void loop() {
 
   if (now - lastControlMs >= CONTROL_MS) {
     lastControlMs = now;
-    sampleValid = apdsReady && updateAPDS();
+    sampleOK = apdsReady && updateAPDS();
     if (running) {
-      if (!sampleValid) {
-        stopRun("APDS read invalid, saturated, or I2C error");
-      } else if (filtered < MIN_WALL_READING) {
-        if (++lowWallSamples >= 3) stopRun("left wall lost");
-      } else {
-        lowWallSamples = 0;
-      }
+      if (!sampleOK) stopRun("APDS saturated or I2C error");
       if (running) {
         // Original left-wall branch of moveStraightAligned():
         // error = left reading - left target; drive = KP*error + KD*(error-prev).
@@ -240,9 +222,9 @@ void loop() {
 
   if (now - lastPrintMs >= PRINT_MS) {
     lastPrintMs = now;
-    Serial.printf("%s CH0 raw=%3u filtered=%6.1f valid=%u saturated=%u usable=%u error=%+6.1f L=%3d R=%3d\n",
+    Serial.printf("%s CH0 raw=%3u filtered=%6.1f saturated=%u read_ok=%u error=%+6.1f L=%3d R=%3d\n",
                   running ? "RUN " : "IDLE", raw, filtered,
-                  !!(statusReg & 0x02), !!(statusReg & 0x40), sampleValid,
+                  !!(statusReg & 0x40), sampleOK,
                   errorNow, leftCommand, rightCommand);
   }
   delay(1);
