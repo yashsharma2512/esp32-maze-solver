@@ -77,3 +77,7 @@ ESP32 Arduino core 3.3.11, esp32:esp32:esp32; 73% flash and 14% RAM.
 The earlier APDS channel-0 test showed valid conversions but raw values around
 0–5 near a target; the encoder test previously reported weak magnets. Confirm
 these are fixed before using APDS wall thresholds or wheel distance control.
+
+The APDS saturation flag is latched by the chip. This sketch clears it after
+reporting a saturated sample, allowing later samples to show whether the
+condition persists.
