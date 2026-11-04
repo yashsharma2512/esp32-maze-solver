@@ -13,7 +13,7 @@ does not turn at corners or avoid an obstacle ahead.
    you want from a straight left wall, with a clear path ahead.
 3. Power the motor driver. Press the DevKit **BOOT** button **after startup**,
    or send **s** in Serial Monitor. The sketch captures the current APDS
-   reading as its target and moves for at most **2 seconds**.
+   raw reading as its target and moves for at most **10 seconds**.
 4. Press BOOT again or send **x** to stop early. The driver returns to
    standby when stopped.
 
@@ -40,7 +40,7 @@ calibrated. For the first movement test, base PWM is reduced to 70 and steering
 is limited to +/-25; edit BASE_PWM and MAX_STEERING near the top after observing
 the wheels. The original left motor 0.985 trim is retained. The controller runs
 every 20 ms. Motor output stops if an I2C read fails, saturation appears,
-the user stops, or two seconds elapse. A single side sensor cannot confirm
+the user stops, or ten seconds elapse. A single side sensor cannot confirm
 that the wall is still present or detect an obstacle ahead.
 
 ## Pin map
@@ -64,5 +64,6 @@ Compiled for esp32:esp32:esp32 with ESP32 Arduino core 3.3.11: 23% flash,
 
 The APDS saturation flag is latched by the chip. The sketch clears it after
 reporting a saturated sample, so a past event does not block all later starts.
-The saturated sample is still excluded from steering. If saturation keeps
+The saturated sample is excluded from steering; the filter resets on the next
+clean read. Idle output repeats last_stop so the reason remains visible. If saturation keeps
 appearing, increase wall distance or reduce the APDS LED boost/gain.
