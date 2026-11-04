@@ -12,10 +12,11 @@ tests, not the complete maze-solving firmware.
 | `tests/Motor_Test/Motor_Test.ino` | Test each motor forward/reverse, both motors together, and left/right pivots. Uses the maze sketch's `setMotorIOs()` and `moveMotor(left, right)` interface. |
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 | `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
+| `tests/Unified_Robot_Test/Unified_Robot_Test.ino` | Test documented motors, IMU, APDS sensors, and encoders together, with USB Serial and a local Wi-Fi dashboard. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
 the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. All four sketches
+use the ESP32 Arduino board package's built-in libraries. All five sketches
 compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
 
 ## I2C wiring
@@ -54,17 +55,26 @@ health: move/rotate the board and inspect the changing readings.
 
 Connect the APDS-9960 SDA/SCL to the TCA9548A's **SD0/SC0** outputs, with
 3.3 V compatible power and common ground. The TCA main bus stays on ESP32
-GPIO21/GPIO22 as above. This standalone test uses the original
-`MAZESOLVER/proximity.ino` register settings and smoothing factor `alpha = 0.65`.
+GPIO21/GPIO22 as above. This standalone test keeps the original APDS gain and
+LED boost settings, adds eight IR pulses, and uses smoothing factor `alpha = 0.65`.
 Keep the motors off, upload the sketch, and move a hand toward and away from
 the sensor. Serial Monitor at 115200 baud prints `CH0 raw` (0–255) and
 `filtered` values every 100 ms. The raw reading should respond to the motion;
-filtered readings respond more gradually. Live channel-0 readings are not yet
-verified in this repo.
+filtered readings respond more gradually. The reported channel-0 hardware readings
+had valid conversions but only raw 0–5 near a target; check the IR LED supply and
+sensor orientation before using them for wall thresholds.
 
 The original sketch combines two bytes starting at `PDATA` (`0x9C`), but
 proximity data is one byte. The test reads only that byte so the adjacent
 register cannot alter the reported value.
+
+## Unified robot test and Wi-Fi dashboard
+
+The [unified test](tests/Unified_Robot_Test/README.md) scans the TCA channels for
+APDS-9960 sensors, reads the main-bus MPU6050/MPU6500 and both AS5600 encoders,
+and provides short motor pulses on request. Motors remain in standby on startup.
+Its local Wi-Fi access point serves a live status page at `http://192.168.4.1/`;
+USB Serial also works. This is a standalone diagnostic sketch, not maze firmware.
 
 ## AS5600 encoder wiring and test
 
