@@ -19,7 +19,6 @@ constexpr int BASE_PWM = 70;
 constexpr int MAX_STEERING = 25;
 constexpr uint32_t CONTROL_MS = 20;
 constexpr uint32_t PRINT_MS = 100;
-constexpr uint32_t MAX_RUN_MS = 10000;
 
 bool apdsReady = false, sampleOK = false, haveFilter = false, running = false;
 bool filterResetPending = false;
@@ -27,7 +26,7 @@ const char *lastStopReason = "none";
 uint8_t raw = 0, statusReg = 0;
 float filtered = 0.0f, previousError = 0.0f, errorNow = 0.0f;
 int leftCommand = 0, rightCommand = 0;
-uint32_t lastControlMs = 0, lastPrintMs = 0, lastReadMs = 0, runStartMs = 0;
+uint32_t lastControlMs = 0, lastPrintMs = 0, lastReadMs = 0;
 
 bool ping(uint8_t addr) {
   Wire.beginTransmission(addr);
@@ -178,9 +177,8 @@ void startRun() {
   lastStopReason = "none";
   previousError = 0.0f;
   errorNow = 0.0f;
-  runStartMs = millis();
   running = true;
-  Serial.printf("START: 10 s max, target=%.1f, base PWM=%d\n",
+  Serial.printf("START: continuous, target=%.1f, base PWM=%d\n",
                 targetReading, BASE_PWM);
 }
 
@@ -190,7 +188,7 @@ void setup() {
   delay(500);
   Serial.println("\nLEFT WALL TRACK TEST | ESP32 | APDS on TCA CH0");
   Serial.println("Place robot at the desired distance from a straight LEFT wall.");
-  Serial.println("Press BOOT after startup or send s for a 10-second run; press BOOT again or send x to stop.");
+  Serial.println("Press BOOT after startup or send s to start; press BOOT again or send x to stop.");
   pinMode(BUTTON_GPIO, INPUT_PULLUP);
   Wire.begin(SDA_PIN, SCL_PIN, 100000);
   Wire.setTimeOut(30);
@@ -217,7 +215,6 @@ void loop() {
   }
 
   uint32_t now = millis();
-  if (running && now - runStartMs >= MAX_RUN_MS) stopRun("10-second limit");
 
   if (now - lastControlMs >= CONTROL_MS) {
     lastControlMs = now;
