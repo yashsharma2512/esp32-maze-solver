@@ -58,6 +58,13 @@ bool writeRegister(uint8_t reg, uint8_t value) {
   return Wire.endTransmission() == 0;
 }
 
+// PGSAT latches until PICLEAR (0xE5) or PEN is disabled.
+bool clearProximityFlag() {
+  Wire.beginTransmission(APDS_ADDR);
+  Wire.write(uint8_t(0xE5));
+  return Wire.endTransmission() == 0;
+}
+
 bool initAPDS() {
   if (!ping(TCA_ADDR) || !selectChannel0() || !ping(APDS_ADDR)) return false;
   uint8_t id = 0;
@@ -85,12 +92,19 @@ bool initAPDS() {
 bool updateAPDS() {
   if (!selectChannel0()) return false;
   if (!readRegister(0x93, statusReg) || !readRegister(0x9C, raw)) return false;
-  if (!(statusReg & 0x02) || (statusReg & 0x40)) return false;
-  filtered = haveFilter ? FILTER_ALPHA * filtered +
-                          (1.0f - FILTER_ALPHA) * raw : raw;
-  haveFilter = true;
-  lastValidMs = millis();
-  return true;
+  bool converted = (statusReg & 0x02) != 0;
+  bool saturated = (statusReg & 0x40) != 0;
+  // Keep telemetry current even if a saturated sample is unsafe for steering.
+  if (converted) {
+    filtered = haveFilter ? FILTER_ALPHA * filtered +
+                            (1.0f - FILTER_ALPHA) * raw : raw;
+    haveFilter = true;
+    lastValidMs = millis();
+  }
+  // Clear the sticky flag so the next cycle can reveal whether saturation
+  // is still happening at the current wall distance.
+  if (saturated && !clearProximityFlag()) return false;
+  return converted && !saturated;
 }
 
 void stopMotors() {
@@ -139,9 +153,14 @@ void stopRun(const char *reason) {
 
 void startRun() {
   if (running) return;
-  if (!apdsReady || !sampleValid || !haveFilter ||
-      millis() - lastValidMs > 100) {
-    Serial.println("START BLOCKED: APDS CH0 has no fresh valid reading.");
+  if (!apdsReady || !haveFilter || millis() - lastValidMs > 100) {
+    Serial.println("START BLOCKED: APDS CH0 has no fresh converted reading.");
+    return;
+  }
+  if (!sampleValid) {
+    Serial.println((statusReg & 0x40)
+        ? "START BLOCKED: saturation flag was cleared; wait for the next sample."
+        : "START BLOCKED: APDS CH0 read failed or conversion is invalid.");
     return;
   }
   if (filtered < MIN_WALL_READING) {
@@ -221,9 +240,9 @@ void loop() {
 
   if (now - lastPrintMs >= PRINT_MS) {
     lastPrintMs = now;
-    Serial.printf("%s CH0 raw=%3u filtered=%6.1f valid=%u saturated=%u error=%+6.1f L=%3d R=%3d\n",
+    Serial.printf("%s CH0 raw=%3u filtered=%6.1f valid=%u saturated=%u usable=%u error=%+6.1f L=%3d R=%3d\n",
                   running ? "RUN " : "IDLE", raw, filtered,
-                  !!(statusReg & 0x02), !!(statusReg & 0x40),
+                  !!(statusReg & 0x02), !!(statusReg & 0x40), sampleValid,
                   errorNow, leftCommand, rightCommand);
   }
   delay(1);
