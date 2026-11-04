@@ -39,6 +39,13 @@ bool writeRegister(uint8_t reg, uint8_t value) {
   return Wire.endTransmission() == 0;
 }
 
+// STATUS.PGSAT stays set until PICLEAR or proximity is disabled.
+bool clearProximityFlag() {
+  Wire.beginTransmission(APDS9960_ADDRESS);
+  Wire.write(uint8_t(0xE5));
+  return Wire.endTransmission() == 0;
+}
+
 bool readRegister(uint8_t reg, uint8_t &value) {
   Wire.beginTransmission(APDS9960_ADDRESS);
   Wire.write(reg);
@@ -126,6 +133,10 @@ void loop() {
   }
   bool valid = (status & 0x02) != 0;
   bool saturated = (status & 0x40) != 0;
+  if (saturated && !clearProximityFlag()) {
+    Serial.println("READ ERROR: could not clear APDS saturation flag.");
+    return;
+  }
   if (!valid) {
     Serial.printf("CH0 INVALID status=0x%02X raw=%3u (no completed proximity sample)\n",
                   status, raw);
