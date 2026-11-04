@@ -72,10 +72,11 @@ register cannot alter the reported value.
 ## Left wall tracking test
 
 The [left-wall test](tests/Left_Wall_Follow_Test/README.md) uses APDS channel 0
-and the documented motor pins. It waits for a successful APDS channel-0 read, captures the starting
-reading as its target, then follows a straight wall for up to two seconds.
-It does not gate on PVALID or a fixed proximity count. Press BOOT after startup or send `s` on USB Serial to start; BOOT or
-`x` stops it. There is no front-wall or corner detection in this test.
+and the documented motor pins. It waits for a successful APDS channel-0 read,
+captures the current raw count as its target, then follows a straight wall for
+up to ten seconds. It does not gate on PVALID or a fixed proximity count.
+Press BOOT after startup or send `s` on USB Serial to start; BOOT or `x` stops it.
+Idle output repeats the last stop reason. There is no front-wall or corner detection in this test.
 
 ## Unified robot test and Wi-Fi dashboard
 
