@@ -18,10 +18,10 @@ does not turn at corners or avoid an obstacle ahead.
    standby when stopped.
 
 Do not hold BOOT while powering or resetting the ESP32; GPIO0 is a boot strap
-pin. The test blocks movement unless CH0 has a recent valid, unsaturated
-reading of at least 25. This is the original wallSense threshold. The earlier
-CH0 readings around 0–5 will therefore print START BLOCKED until the optical
-sensor response is fixed.
+pin. The test requires a recent successful CH0 I2C read and no saturation.
+It does not gate on the APDS PVALID bit or a fixed proximity count. Place the
+robot beside the left wall before starting: it captures that reading as the
+target, even if the count is around 20.
 
 ## Control used
 
@@ -39,8 +39,9 @@ run starts because this assembled robot's sensor response is not yet
 calibrated. For the first movement test, base PWM is reduced to 70 and steering
 is limited to +/-25; edit BASE_PWM and MAX_STEERING near the top after observing
 the wheels. The original left motor 0.985 trim is retained. The controller runs
-every 20 ms. Motor output stops if the wall is lost for three samples, a sensor
-read fails, saturation appears, the user stops, or two seconds elapse.
+every 20 ms. Motor output stops if an I2C read fails, saturation appears,
+the user stops, or two seconds elapse. A single side sensor cannot confirm
+that the wall is still present or detect an obstacle ahead.
 
 ## Pin map
 
@@ -63,5 +64,5 @@ Compiled for esp32:esp32:esp32 with ESP32 Arduino core 3.3.11: 23% flash,
 
 The APDS saturation flag is latched by the chip. The sketch clears it after
 reporting a saturated sample, so a past event does not block all later starts.
-The current sample is still marked unusable for steering. If saturation keeps
+The saturated sample is still excluded from steering. If saturation keeps
 appearing, increase wall distance or reduce the APDS LED boost/gain.
