@@ -60,3 +60,8 @@ in this repo remains available for Wi-Fi sensor debugging.
 
 Compiled for esp32:esp32:esp32 with ESP32 Arduino core 3.3.11: 23% flash,
 7% RAM. Live wall-follow behavior still needs testing on the robot.
+
+The APDS saturation flag is latched by the chip. The sketch clears it after
+reporting a saturated sample, so a past event does not block all later starts.
+The current sample is still marked unusable for steering. If saturation keeps
+appearing, increase wall distance or reduce the APDS LED boost/gain.
