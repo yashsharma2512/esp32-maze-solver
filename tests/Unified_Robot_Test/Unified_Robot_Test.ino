@@ -79,6 +79,13 @@ bool writeReg(uint8_t addr, uint8_t reg, uint8_t value) {
   return Wire.endTransmission() == 0;
 }
 
+// APDS PGSAT is sticky until PICLEAR (0xE5) or PEN is disabled.
+bool clearApdsSaturation() {
+  Wire.beginTransmission(APDS_ADDR);
+  Wire.write(uint8_t(0xE5));
+  return Wire.endTransmission() == 0;
+}
+
 int16_t signed16(const uint8_t *p) {
   return int16_t((uint16_t(p[0]) << 8) | p[1]);
 }
@@ -240,6 +247,7 @@ void sampleSensors() {
       if (apdsReadOK[ch]) {
         apdsStatus[ch] = status;
         apdsRaw[ch] = raw;
+        if ((status & 0x40) && !clearApdsSaturation()) apdsReadOK[ch] = false;
         if (status & 0x02) {
           apdsFiltered[ch] = apdsHasSample[ch] ?
               APDS_ALPHA * apdsFiltered[ch] + (1.0f - APDS_ALPHA) * raw : raw;
