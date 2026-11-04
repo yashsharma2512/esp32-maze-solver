@@ -1,6 +1,6 @@
 # Left wall tracking test
 
-A short standalone movement test for the 38-pin ESP32-WROOM-32 DevKit. It uses
+A standalone movement test for the 38-pin ESP32-WROOM-32 DevKit. It uses
 the repo's motor pins and one APDS-9960 on TCA9548A channel 0. The CH0 sensor
 must point at the **left wall**. There is no front sensor in this test, so it
 does not turn at corners or avoid an obstacle ahead.
@@ -13,8 +13,8 @@ does not turn at corners or avoid an obstacle ahead.
    you want from a straight left wall, with a clear path ahead.
 3. Power the motor driver. Press the DevKit **BOOT** button **after startup**,
    or send **s** in Serial Monitor. The sketch captures the current APDS
-   raw reading as its target and moves for at most **10 seconds**.
-4. Press BOOT again or send **x** to stop early. The driver returns to
+   raw reading as its target and continues following until stopped.
+4. Press BOOT again or send **x** to stop. The driver returns to
    standby when stopped.
 
 Do not hold BOOT while powering or resetting the ESP32; GPIO0 is a boot strap
@@ -40,7 +40,7 @@ calibrated. For the first movement test, base PWM is reduced to 70 and steering
 is limited to +/-25; edit BASE_PWM and MAX_STEERING near the top after observing
 the wheels. The original left motor 0.985 trim is retained. The controller runs
 every 20 ms. Motor output stops if an I2C read fails, saturation appears,
-the user stops, or ten seconds elapse. A single side sensor cannot confirm
+the user stops. There is no run timer. A single side sensor cannot confirm
 that the wall is still present or detect an obstacle ahead.
 
 ## Pin map
