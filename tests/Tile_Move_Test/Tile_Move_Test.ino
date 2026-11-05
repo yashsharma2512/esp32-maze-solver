@@ -7,6 +7,7 @@
 constexpr int SDA_PIN = 21, SCL_PIN = 22;
 constexpr uint8_t TCA_ADDR = 0x70, AS5600_ADDR = 0x36;
 constexpr uint8_t LEFT_CH = 5, RIGHT_CH = 4;
+constexpr uint8_t APDS_ADDR = 0x39, LEFT_APDS_CH = 0, RIGHT_APDS_CH = 1;
 constexpr int LMF = 25, LMR = 26, PWML = 27;
 constexpr int RMF = 18, RMR = 19, PWMR = 23, STBY = 33;
 constexpr int BUTTON_GPIO = 0; // DevKit BOOT button; press after power-up.
@@ -21,6 +22,11 @@ constexpr float BALANCE_GAIN = 0.5f; // PWM correction per mm wheel mismatch.
 constexpr int MAX_BALANCE_PWM = 20;
 constexpr uint32_t SAMPLE_MS = 20, PRINT_MS = 200;
 constexpr uint32_t MAX_MOVE_MS = 15000; // Fault timeout if target is never reached.
+// Original startup: cover left APDS, then cover right APDS. The old firmware
+// used 150; this robot reported lower readings, so tune these two thresholds.
+constexpr uint8_t LEFT_START_RAW = 60, RIGHT_START_RAW = 60;
+constexpr uint8_t START_RELEASE_RAW = 30;
+constexpr uint32_t APDS_SAMPLE_MS = 50;
 
 struct Encoder {
   const char *name;
@@ -36,9 +42,14 @@ struct Encoder {
 Encoder leftEnc = {"LEFT", LEFT_CH, 0, -1, 0, 0, 0, 0, false};
 Encoder rightEnc = {"RIGHT", RIGHT_CH, 0, -1, 0, 0, 0, 0, false};
 
-bool busReady = false, moving = false;
+enum StartPhase { WAIT_LEFT, WAIT_RIGHT, WAIT_RIGHT_RELEASE, READY };
+StartPhase startPhase = WAIT_LEFT;
+bool busReady = false, apdsReady = false, moving = false;
+bool leftWasLow = false, rightWasLow = false;
+uint8_t leftApdsRaw = 0, rightApdsRaw = 0;
+uint8_t gestureSamples = 0;
 int moveDirection = 1, leftPWM = 0, rightPWM = 0;
-uint32_t moveStartMs = 0, lastSampleMs = 0, lastPrintMs = 0;
+uint32_t moveStartMs = 0, lastSampleMs = 0, lastPrintMs = 0, lastApdsMs = 0;
 const char *lastStopReason = "none";
 const float WHEEL_CIRCUMFERENCE_MM = WHEEL_DIAMETER_MM * PI;
 const float TARGET_DEGREES = TILE_LENGTH_MM / WHEEL_CIRCUMFERENCE_MM * 360.0f;
@@ -54,6 +65,53 @@ bool selectChannel(uint8_t channel) {
   if (Wire.endTransmission() != 0) return false;
   if (Wire.requestFrom(TCA_ADDR, uint8_t(1)) != 1) return false;
   return Wire.read() == uint8_t(1U << channel);
+}
+
+bool writeAPDS(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(APDS_ADDR);
+  Wire.write(reg);
+  Wire.write(value);
+  return Wire.endTransmission() == 0;
+}
+
+bool readAPDS(uint8_t reg, uint8_t &value) {
+  Wire.beginTransmission(APDS_ADDR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(APDS_ADDR, uint8_t(1)) != 1) return false;
+  value = Wire.read();
+  return true;
+}
+
+bool initAPDS(uint8_t channel) {
+  if (!selectChannel(channel) || !ping(APDS_ADDR)) return false;
+  uint8_t id = 0;
+  if (!readAPDS(0x92, id) || id != 0xAB) return false;
+  // Match the working standalone APDS test: original gain/boost, 8 IR pulses.
+  bool ok = writeAPDS(0x80, 0x00);
+  ok = writeAPDS(0x90, 0x31) && ok;
+  ok = writeAPDS(0x8F, 0x49) && ok;
+  ok = writeAPDS(0x8E, 0x87) && ok;
+  ok = writeAPDS(0x80, 0x01) && ok;
+  delay(10);
+  ok = writeAPDS(0x80, 0x05) && ok;
+  delay(50);
+  return ok;
+}
+
+bool sampleAPDS() {
+  return selectChannel(LEFT_APDS_CH) && readAPDS(0x9C, leftApdsRaw) &&
+         selectChannel(RIGHT_APDS_CH) && readAPDS(0x9C, rightApdsRaw);
+}
+
+const char *phaseName() {
+  switch (startPhase) {
+    case WAIT_LEFT: return "WAIT_LEFT_HAND";
+    case WAIT_RIGHT: return "WAIT_RIGHT_HAND";
+    case WAIT_RIGHT_RELEASE: return "RELEASE_RIGHT_HAND";
+    case READY: return "READY";
+  }
+  return "UNKNOWN";
 }
 
 bool readRegisters(uint8_t reg, uint8_t *data, uint8_t count) {
@@ -157,7 +215,15 @@ void stopMove(const char *reason) {
 }
 
 void startMove(int direction) {
-  if (moving || !busReady) return;
+  if (moving) return;
+  if (startPhase != READY) {
+    Serial.println("START BLOCKED: show left hand, then right hand to the APDS sensors.");
+    return;
+  }
+  if (!busReady) {
+    Serial.println("START BLOCKED: encoder bus is not ready.");
+    return;
+  }
   if (!readBoth()) {
     Serial.println("START BLOCKED: encoder I2C read failed.");
     return;
@@ -180,10 +246,43 @@ void startMove(int direction) {
                 TARGET_DEGREES);
 }
 
+void updateStartup() {
+  if (!apdsReady || startPhase == READY) return;
+  if (!sampleAPDS()) {
+    Serial.println("STARTUP APDS READ ERROR; motors remain off.");
+    gestureSamples = 0;
+    return;
+  }
+  if (startPhase == WAIT_LEFT) {
+    if (leftApdsRaw < LEFT_START_RAW) leftWasLow = true;
+    gestureSamples = leftWasLow && leftApdsRaw >= LEFT_START_RAW ?
+                     gestureSamples + 1 : 0;
+    if (gestureSamples >= 3) {
+      startPhase = WAIT_RIGHT;
+      gestureSamples = 0;
+      Serial.println("LEFT HAND DETECTED. Now show hand to RIGHT APDS CH1.");
+    }
+  } else if (startPhase == WAIT_RIGHT) {
+    if (rightApdsRaw < RIGHT_START_RAW) rightWasLow = true;
+    gestureSamples = rightWasLow && rightApdsRaw >= RIGHT_START_RAW ?
+                     gestureSamples + 1 : 0;
+    if (gestureSamples >= 3) {
+      startPhase = WAIT_RIGHT_RELEASE;
+      Serial.println("RIGHT HAND DETECTED. Remove hand to start one tile.");
+    }
+  } else if (startPhase == WAIT_RIGHT_RELEASE &&
+             rightApdsRaw <= START_RELEASE_RAW) {
+    startPhase = READY;
+    Serial.println("STARTUP COMPLETE. Starting one forward tile.");
+    startMove(1);
+  }
+}
+
 void printStatus() {
   float lmm = wheelMM(leftEnc), rmm = wheelMM(rightEnc);
-  Serial.printf("%s L=%.1f mm (%s) R=%.1f mm (%s) avg=%.1f/%.1f mm PWM=%d,%d last_stop=%s\n",
-                moving ? "MOVE" : "IDLE", lmm, magnetLabel(leftEnc),
+  Serial.printf("%s %s APDS_L=%u APDS_R=%u L=%.1f mm (%s) R=%.1f mm (%s) avg=%.1f/%.1f mm PWM=%d,%d last_stop=%s\n",
+                moving ? "MOVE" : "IDLE", phaseName(), leftApdsRaw, rightApdsRaw,
+                lmm, magnetLabel(leftEnc),
                 rmm, magnetLabel(rightEnc), (lmm + rmm) * 0.5f,
                 TILE_LENGTH_MM, leftPWM, rightPWM, lastStopReason);
 }
@@ -196,13 +295,20 @@ void setup() {
   Serial.println("\nESP32 ONE-TILE MOTOR + AS5600 TEST");
   Serial.printf("Wheel=%.1f mm, tile=%.1f mm, encoder channels LEFT=%u RIGHT=%u\n",
                 WHEEL_DIAMETER_MM, TILE_LENGTH_MM, LEFT_CH, RIGHT_CH);
-  Serial.println("BOOT or g: forward one tile | b: reverse one tile | x: stop");
+  Serial.printf("Startup: hand at LEFT APDS CH%u, then RIGHT APDS CH%u; remove right hand.\n",
+                LEFT_APDS_CH, RIGHT_APDS_CH);
+  Serial.printf("Gesture thresholds LEFT=%u RIGHT=%u release=%u; edit if needed.\n",
+                LEFT_START_RAW, RIGHT_START_RAW, START_RELEASE_RAW);
+  Serial.println("After startup: BOOT or g: forward tile | b: reverse tile | x: stop");
   Wire.begin(SDA_PIN, SCL_PIN, 100000);
   Wire.setTimeOut(50);
   busReady = ping(TCA_ADDR) && selectChannel(LEFT_CH) && ping(AS5600_ADDR) &&
              selectChannel(RIGHT_CH) && ping(AS5600_ADDR);
   if (!busReady) Serial.println("ERROR: TCA or encoder missing. Motor start disabled.");
-  else if (readBoth()) printStatus();
+  apdsReady = initAPDS(LEFT_APDS_CH) && initAPDS(RIGHT_APDS_CH);
+  if (!apdsReady) Serial.println("ERROR: left or right APDS missing. Startup disabled.");
+  if (busReady) readBoth();
+  printStatus();
 }
 
 void loop() {
@@ -224,6 +330,10 @@ void loop() {
   }
 
   uint32_t now = millis();
+  if (apdsReady && startPhase != READY && now - lastApdsMs >= APDS_SAMPLE_MS) {
+    lastApdsMs = now;
+    updateStartup();
+  }
   if (moving && now - moveStartMs > MAX_MOVE_MS) stopMove("encoder timeout");
   if (busReady && now - lastSampleMs >= SAMPLE_MS) {
     lastSampleMs = now;
