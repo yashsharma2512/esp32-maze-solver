@@ -83,10 +83,12 @@ Idle output repeats the last stop reason. There is no front-wall or corner detec
 
 The [one tile test](tests/Tile_Move_Test/README.md) is a separate sketch. It uses
 70 mm wheels, a 300 mm tile length, the documented motor pins, and AS5600
-encoders on TCA channels 5 (left) and 4 (right). Send `g` for one tile forward,
-`b` for one tile backward, or `x` to stop; BOOT starts or stops a forward move.
-Each move tares both encoders before driving. Verify wheel direction and encoder
-movement with the wheels lifted before testing on the floor.
+encoders on TCA channels 5 (left) and 4 (right). As in the original startup,
+show a hand to the left APDS (channel 0), then the right APDS (channel 1), and
+remove the right hand to start the first forward tile. After that, send `g` for
+one tile forward, `b` for one tile backward, or `x` to stop; BOOT starts or stops
+a forward move. Each move tares both encoders before driving. Verify wheel
+direction and encoder movement with the wheels lifted before floor testing.
 
 The robot's reported APDS map for future navigation is **left channel 0, right
 channel 1, front channel 7**. The original firmware expects four APDS readings,
