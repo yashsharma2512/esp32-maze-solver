@@ -12,12 +12,15 @@ left wall follow sketch or the maze solver.
    upload. Open Serial Monitor at **115200 baud**.
 2. Check that both idle magnet labels say `OK`. The sketch blocks movement if
    an encoder cannot be read or its magnet status is unhealthy.
-3. For the first run, lift the wheels and send `g` to check that both spin
+3. For the first run, **lift the wheels**. Show a hand to the **left APDS on
+   channel 0**, then to the **right APDS on channel 1**, then remove the right
+   hand. This follows the original robot's two APDS startup gestures. Removing
+   the right hand starts the first forward tile. Check that both wheels spin
    forward and both measured distances increase. Send `x` to stop.
 4. Put the robot at the center of a tile with at least 30 cm of clear floor
-   ahead. Send `g` or briefly press BOOT **after startup** to move forward one
-   tile. Each new command tares both encoders. Send `b` for one tile backward.
-   BOOT or `x` stops an active move.
+   ahead. After startup, send `g` or briefly press BOOT for each additional
+   forward tile. Send `b` for one tile backward. Each new command tares both
+   encoders; BOOT or `x` stops an active move.
 5. Measure center to center travel and adjust `TILE_LENGTH_MM` or
    `WHEEL_DIAMETER_MM` near the top of the sketch if needed. Current values
    are **300 mm** and **70 mm**, as measured for this robot.
@@ -30,6 +33,15 @@ There is no front obstacle sensor in this sketch, so use a clear path. Do not
 hold BOOT while resetting or powering the ESP32 because GPIO0 selects its boot
 mode.
 
+The original APDS startup thresholds were 150. This sketch sets editable
+`LEFT_START_RAW` and `RIGHT_START_RAW` to 60 because the channel-0 test on this
+robot showed lower readings. Both sensors must first read below their trigger
+and then above it for three samples. The right reading must fall below
+`START_RELEASE_RAW` (30) before movement. Watch the printed `APDS_L` and
+`APDS_R` values and adjust the thresholds if the hand gestures do not register.
+The original firmware calibrates its MPU between the two hand gestures; this
+standalone distance test does not use the MPU.
+
 ## Wiring used
 
 | Part | ESP32 / TCA9548A |
@@ -37,6 +49,8 @@ mode.
 | TCA SDA, SCL | GPIO21, GPIO22 |
 | Left AS5600 | TCA channel 5, address 0x36 |
 | Right AS5600 | TCA channel 4, address 0x36 |
+| Left / right APDS-9960 startup sensors | TCA channels 0 / 1, address 0x39 |
+| Front APDS-9960 | TCA channel 7; unused by this test |
 | Left TB6612 AIN1, AIN2, PWMA | GPIO25, GPIO26, GPIO27 |
 | Right TB6612 BIN1, BIN2, PWMB | GPIO18, GPIO19, GPIO23 |
 | TB6612 STBY | GPIO33 |
