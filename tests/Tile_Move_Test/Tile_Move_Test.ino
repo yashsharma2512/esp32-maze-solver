@@ -22,10 +22,10 @@ constexpr float BALANCE_GAIN = 0.5f; // PWM correction per mm wheel mismatch.
 constexpr int MAX_BALANCE_PWM = 20;
 constexpr uint32_t SAMPLE_MS = 20, PRINT_MS = 200;
 constexpr uint32_t MAX_MOVE_MS = 15000; // Fault timeout if target is never reached.
-// Original startup: cover left APDS, then cover right APDS. The old firmware
-// used 150; this robot reported lower readings, so tune these two thresholds.
-constexpr uint8_t LEFT_START_RAW = 60, RIGHT_START_RAW = 60;
-constexpr uint8_t START_RELEASE_RAW = 30;
+// Original startup: cover left APDS, then cover right APDS. Use its trigger
+// level of 150; release hysteresis waits for the right hand to move away.
+constexpr uint8_t LEFT_START_RAW = 150, RIGHT_START_RAW = 150;
+constexpr uint8_t START_RELEASE_RAW = 100;
 constexpr uint32_t APDS_SAMPLE_MS = 50;
 
 struct Encoder {
