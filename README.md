@@ -12,14 +12,15 @@ tests, not the complete maze-solving firmware.
 | `tests/Motor_Test/Motor_Test.ino` | Test each motor forward/reverse, both motors together, and left/right pivots. Uses the maze sketch's `setMotorIOs()` and `moveMotor(left, right)` interface. |
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 | `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
+| `tests/AS7341_Color_Test/AS7341_Color_Test.ino` | Read eight visible spectral bands, Clear, and Near IR from a main-bus AS7341. |
 | `tests/Unified_Robot_Test/Unified_Robot_Test.ino` | Test documented motors, IMU, APDS sensors, and encoders together, with USB Serial and a local Wi-Fi dashboard. |
 | `tests/Left_Wall_Follow_Test/Left_Wall_Follow_Test.ino` | Run continuous straight left-wall tracking with APDS on TCA channel 0 and the documented motor pins. |
 | `tests/Tile_Move_Test/Tile_Move_Test.ino` | Move forward or backward one encoder-measured 300 mm tile per command. |
 
 Open each sketch separately in Arduino IDE. Select **ESP32 Dev Module**, choose
-the board's port, upload, and open Serial Monitor at **115200 baud**. The sketches
-use the ESP32 Arduino board package's built-in libraries. All seven sketches
-compile for **ESP32 Dev Module**; verify behavior on the assembled robot.
+the board's port, upload, and open Serial Monitor at **115200 baud**. The AS7341
+test requires the two libraries listed below. The other sketches use the ESP32
+Arduino board package's built-in libraries. Verify behavior on the assembled robot.
 
 ## I2C wiring
 
@@ -52,6 +53,27 @@ The reported hardware output showed the sensor at bus address `0x68` returning
 `0x68`. The updated test supports both identities and repeats the identity read
 before configuring the device. Identity alone does not establish full sensor
 health: move/rotate the board and inspect the changing readings.
+
+## AS7341 color sensor test
+
+On a 3.3 V-compatible breakout, connect VCC/VIN to ESP32 3V3 and GND to common
+ground. Connect SDA to **GPIO21** and SCL to **GPIO22**, in parallel with the TCA
+and IMU. Install **Adafruit AS7341** and **Adafruit BusIO** in Arduino Library
+Manager. Upload `AS7341_Color_Test.ino` and open Serial Monitor at 115200 baud.
+
+The sketch checks the sensor ID at `0x39`, then prints ten raw readings per
+line. Cover the sensor and uncover it to check the light response. For a color
+comparison, use different surfaces at the same distance under steady white light.
+The output shows the spectral bands, Clear, and Near IR. These readings can be
+used to develop color thresholds for the robot's lighting and mounting.
+
+**The AS7341 and APDS-9960 share `0x39`.** This test closes every TCA channel
+before initializing the main-bus AS7341. Before running an existing APDS-based
+test, power off and disconnect the main-bus AS7341. To use both in the same
+firmware, move the AS7341 to its own unused TCA channel and have the firmware
+select only one `0x39` channel at a time.
+
+[Adafruit AS7341 Arduino guide](https://learn.adafruit.com/adafruit-as7341-10-channel-light-color-sensor-breakout/arduino)
 
 ## APDS-9960 proximity test on channel 0
 
