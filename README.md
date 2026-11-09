@@ -15,6 +15,7 @@ wall following with the current three-APDS wiring and gyro turns. Open
 | `tests/Motor_Test/Motor_Test.ino` | Test each motor forward/reverse, both motors together, and left/right pivots. Uses the maze sketch's `setMotorIOs()` and `moveMotor(left, right)` interface. |
 | `tests/AS5600_TCA9548A_Test/AS5600_TCA9548A_Test.ino` | Scan TCA channels and read both AS5600 wheel encoders, with startup tare and magnet diagnostics. |
 | `tests/APDS9960_TCA_CH0_Test/APDS9960_TCA_CH0_Test.ino` | Initialize one APDS-9960 through TCA channel 0 and print raw and smoothed proximity values. |
+| `tests/APDS9960_All_Test/APDS9960_All_Test.ino` | Check the left, right, and front APDS sensors and compare readings with maze firmware thresholds. |
 | `tests/AS7341_Color_Test/AS7341_Color_Test.ino` | Read eight visible spectral bands, Clear, and Near IR from an AS7341 on TCA channel 2. |
 | `tests/Unified_Robot_Test/Unified_Robot_Test.ino` | Test documented motors, IMU, APDS sensors, and encoders together, with USB Serial and a local Wi-Fi dashboard. |
 | `tests/Left_Wall_Follow_Test/Left_Wall_Follow_Test.ino` | Run continuous straight left-wall tracking with APDS on TCA channel 0 and the documented motor pins. |
@@ -78,6 +79,25 @@ channels. Firmware that reads both sensor types must select only one `0x39`
 channel at a time.
 
 [Adafruit AS7341 Arduino guide](https://learn.adafruit.com/adafruit-as7341-10-channel-light-color-sensor-breakout/arduino)
+
+## All three APDS-9960 sensors
+
+Open `tests/APDS9960_All_Test/APDS9960_All_Test.ino` and use Serial Monitor at
+**115200 baud**. The test holds motor standby low and reads one TCA channel at a
+time. Left is **CH0**, right is **CH1**, and front is **CH7**. The AS7341 can stay
+wired to CH2.
+
+Check for three `READY` lines at startup. Bring a hand or wall sample toward
+one sensor at a time and check that the matching raw count rises and then falls
+as the target moves away. `valid` shows the PVALID bit. `sat=1` flags a saturated
+sample and the sketch excludes it from the filter. An initialization error on
+one channel leaves the other channels available for testing.
+
+`side=OPEN` uses a filtered count of 9 or less, and `side=WALL` starts at 25.
+`front=BLOCKED` starts at 40 on either the raw or filtered reading. On the side
+sensors, `hand=HIGH` requires raw above 150, and `hand=RELEASED` requires raw
+below 100. Use your maze walls at the intended distance to check the wall
+thresholds before driving.
 
 ## APDS-9960 proximity test on channel 0
 
