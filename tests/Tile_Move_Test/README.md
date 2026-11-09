@@ -33,12 +33,10 @@ There is no front obstacle sensor in this sketch, so use a clear path. Do not
 hold BOOT while resetting or powering the ESP32 because GPIO0 selects its boot
 mode.
 
-The original APDS startup thresholds were 150. This sketch sets editable
-`LEFT_START_RAW` and `RIGHT_START_RAW` to 60 because the channel-0 test on this
-robot showed lower readings. Both sensors must first read below their trigger
-and then above it for three samples. The right reading must fall below
-`START_RELEASE_RAW` (30) before movement. Watch the printed `APDS_L` and
-`APDS_R` values and adjust the thresholds if the hand gestures do not register.
+The APDS startup triggers use the original raw threshold of 150. Both sensors
+must first read below their trigger and then above it for three samples. The
+right reading must fall below `START_RELEASE_RAW` (100) before movement. The
+Serial Monitor prints `APDS_L` and `APDS_R` during startup.
 The original firmware calibrates its MPU between the two hand gestures; this
 standalone distance test does not use the MPU.
 
