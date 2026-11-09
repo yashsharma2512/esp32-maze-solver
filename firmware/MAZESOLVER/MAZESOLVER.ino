@@ -260,11 +260,18 @@ void controlStep(uint32_t now) {
   if (!busReady) return;
 
   const bool leftOK = apdsReady && sampleAPDS(leftAPDS);
+  const uint32_t leftDone = millis();
   const bool rightOK = apdsReady && sampleAPDS(rightAPDS);
+  const uint32_t rightDone = millis();
   const bool frontOK = apdsReady && sampleAPDS(frontAPDS);
+  const uint32_t frontDone = millis();
   const bool gyroOK = imuReady && sampleIMU();
-  sampleEncoder(leftEncoder);
-  sampleEncoder(rightEncoder);
+  const uint32_t gyroDone = millis();
+  const bool leftEncoderOK = sampleEncoder(leftEncoder);
+  const uint32_t leftEncoderDone = millis();
+  const bool rightEncoderOK = sampleEncoder(rightEncoder);
+  const uint32_t decisionTime = millis();
+  const uint32_t sampleTime = decisionTime - now;
   const bool samplesOK = leftOK && rightOK && frontOK && gyroOK;
 
   if (motion == Motion::Idle) {
@@ -277,12 +284,21 @@ void controlStep(uint32_t now) {
     return;
   }
 
-  if (!samplesOK || millis() - now > MAX_CONTROL_GAP_MS) {
+  if (!samplesOK || sampleTime > MAX_CONTROL_GAP_MS) {
+    const char *phase = motionName();
     stopRun("navigation sensor unavailable or late");
+    Serial.printf("NAV FAULT phase=%s cycle=%ums limit=%ums | CH0=%s/%ums CH1=%s/%ums CH7=%s/%ums "
+                  "IMU=%s/%ums ENC5=%s/%ums ENC4=%s/%ums\n",
+                  phase, unsigned(sampleTime), unsigned(MAX_CONTROL_GAP_MS),
+                  leftOK ? "OK" : "FAIL", unsigned(leftDone - now),
+                  rightOK ? "OK" : "FAIL", unsigned(rightDone - leftDone),
+                  frontOK ? "OK" : "FAIL", unsigned(frontDone - rightDone),
+                  gyroOK ? "OK" : "FAIL", unsigned(gyroDone - frontDone),
+                  leftEncoderOK ? "OK" : "FAIL", unsigned(leftEncoderDone - gyroDone),
+                  rightEncoderOK ? "OK" : "FAIL", unsigned(decisionTime - leftEncoderDone));
     return;
   }
 
-  const uint32_t decisionTime = millis();
   switch (motion) {
     case Motion::Follow: followWalls(decisionTime); break;
     case Motion::DistanceMove: updateDistanceMove(decisionTime); break;

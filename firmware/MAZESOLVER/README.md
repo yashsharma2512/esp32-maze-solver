@@ -66,3 +66,10 @@ The AS7341 prints while stopped so its library cannot delay motor control.
 Use the [standalone color calibration test](../../README.md#as7341-color-sensor-test)
 to capture black and white references and compare your floor materials. The main
 firmware reports raw readings while stopped.
+
+If the run stops with `navigation sensor unavailable or late`, copy the next
+`NAV FAULT` line. It shows the motion phase and the read result and duration for
+each APDS channel, the IMU, and both encoders. Any APDS or IMU failure stops the
+run. Encoder read failures contribute to the measured cycle time, but by
+themselves only stop encoder-based maneuvers. A cycle over 120 ms stops the run
+even when each sensor eventually responds.
