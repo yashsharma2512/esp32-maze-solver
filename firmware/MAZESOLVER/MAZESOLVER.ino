@@ -29,7 +29,6 @@ bool running = false, startRequested = false;
 bool busReady = false, apdsReady = false, gyroReady = false;
 bool hadLeftWall = false;
 int previousWallError = 0;
-float straightHeading = 0;
 const char *phase = "IDLE";
 const char *lastStop = "none";
 uint32_t lastSample = 0;
@@ -82,7 +81,7 @@ void printStatus() {
   lastPrint = millis();
   Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
                 phase, unsigned(leftAPDS.raw), unsigned(rightAPDS.raw), unsigned(frontAPDS.raw),
-                yaw, long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
+                mpu.getAngleZ(), long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
                 long(rightEncoder.counts), encoderUsable(rightEncoder) ? "OK" : "CHECK",
                 leftPWM, rightPWM, lastStop);
 }
@@ -225,7 +224,7 @@ bool frontIsBlocked() {
 }
 
 int headingCorrection() {
-  return int(GYRO_Z_SIGN * (yaw - straightHeading) * GYRO_ASSIST);
+  return int(GYRO_Z_SIGN * mpu.getAngleZ() * GYRO_ASSIST);
 }
 
 void driveStraightBesideWalls() {
@@ -282,7 +281,7 @@ bool moveCornerDistance(float targetMM) {
 bool turn90(bool turnLeft) {
   stopMotors();
   phase = "TURN";
-  const float startYaw = yaw;
+  mpu.resetAngleZ();
   const uint32_t start = millis();
   int previousError = 0;
   bool reached = false;
@@ -291,7 +290,7 @@ bool turn90(bool turnLeft) {
 
   while (updateDuringMove()) {
     const uint32_t now = millis();
-    const float turned = fabsf(yaw - startYaw);
+    const float turned = fabsf(mpu.getAngleZ());
     const int error = int(90.0f - turned);
     if (!reached && error <= 0) {
       reached = true;
@@ -299,7 +298,7 @@ bool turn90(bool turnLeft) {
     }
     if (now - start >= TURN_TIMEOUT_MS || (reached && now - reachedAt >= TURN_HOLD_MS)) {
       stopMotors();
-      straightHeading = yaw;
+      mpu.resetAngleZ();
       if (!reached) Serial.printf("TURN TIMEOUT: %.1f of 90 degrees. Rechecking walls.\n", turned);
       return pauseWithSensors(100) && reached;
     }
@@ -329,8 +328,8 @@ void handleFrontWall() {
     while (millis() - start < 1000) {
       if (!updateDuringMove()) return;
     }
-    straightHeading = yaw;
-    pauseWithSensors(100);
+    mpu.resetAngleZ();
+    if (pauseWithSensors(100)) mpu.resetAngleZ();
   } else if (turn90(leftWall ? TURN_RIGHT : TURN_LEFT)) {
     moveCornerDistance(-CORNER_BACKUP_MM);
   }
@@ -378,7 +377,7 @@ void loop() {
     if (sensorsOK) {
       running = true;
       phase = "FOLLOW";
-      straightHeading = yaw;
+      mpu.resetAngleZ();
       hadLeftWall = leftAPDS.filtered > SIDE_OPEN;
       previousWallError = 0;
       lastStop = "none";

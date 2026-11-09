@@ -4,9 +4,10 @@ Use the [step-by-step debugging guide](DEBUGGING.md) to test one part at a
 time. Its step numbers match the comments in `MAZESOLVER.ino`.
 
 Open `MAZESOLVER.ino` with `Hardware.h` in the same sketch folder. In Arduino
-IDE, select **ESP32 Dev Module** and the robot's USB port. Install **Adafruit
-AS7341** and **Adafruit BusIO** if needed. Upload and open Serial Monitor at
-**115200 baud**.
+IDE, select **ESP32 Dev Module** and the robot's USB port. In Library Manager,
+install **Adafruit AS7341**, **Adafruit BusIO**, and **MPU6050_light** (tested
+with 1.2.1). Check the [MPU library setup](#mpu-library-setup) before compiling.
+Upload and open Serial Monitor at **115200 baud**.
 
 | Device | Connection |
 | --- | --- |
@@ -19,6 +20,22 @@ AS7341** and **Adafruit BusIO** if needed. Upload and open Serial Monitor at
 | TB6612 left IN1 / IN2 / PWM | GPIO25 / GPIO26 / GPIO27 |
 | TB6612 right IN1 / IN2 / PWM | GPIO18 / GPIO19 / GPIO23 |
 | TB6612 STBY | GPIO33 |
+
+## MPU library setup
+
+The original sketch uses a small addition to `MPU6050_light` to reset the
+heading to zero. If the compiler says `MPU6050` has no member named
+`resetAngleZ`, follow these steps.
+
+1. Open `libraries/MPU6050_light/src/MPU6050_light.h` in your Arduino
+   sketchbook folder. Find the sketchbook location in Arduino IDE's Preferences.
+2. Find `getAngleZ()` in the `public:` section and add this line below it.
+
+   ```cpp
+   void resetAngleZ() { angleZ = 0; }
+   ```
+
+3. Save the header and compile the sketch again.
 
 ## First run
 
@@ -55,9 +72,11 @@ if the board is mounted with Z pointing down.
 
 Startup applies the original `mpu.begin(3, 0)` settings of ±2,000°/s for the
 gyro and ±2 g for the accelerometer. The firmware identifies the MPU6050 or
-MPU6500, checks that the ranges read back, and averages 500 Z readings for
-the gyro's zero offset. It reads the Z rate directly for heading correction
-and turns. Use one IMU for navigation. The sketch checks `0x68` before `0x69`.
+MPU6500 and verifies both ranges. It uses the original
+`mpu.calcOffsets(true, true)` to calibrate the gyro and accelerometer.
+`mpu.update()` tracks the heading and `mpu.getAngleZ()` supplies the angle for
+straight driving and turns. Use one IMU for navigation. The sketch checks
+`0x68` before `0x69`.
 
 At a left opening the robot advances up to 220 mm, turns 90° left, then
 backs up 30 mm. If the front is blocked, it pauses for 200 ms and chooses

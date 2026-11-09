@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <Adafruit_AS7341.h>
+#include <MPU6050_light.h>
 
 // HARDWARE 1 - Wiring map. The three motor pins are IN1, IN2, and PWM.
 constexpr int SDA_PIN = 21, SCL_PIN = 22;
@@ -35,9 +36,7 @@ Encoder leftEncoder{5}, rightEncoder{4};
 Adafruit_AS7341 colorSensor;
 bool colorReady = false;
 uint32_t lastColorSample = 0;
-uint8_t imuAddress = 0;
-float gyroBias = 0, yaw = 0;
-uint32_t lastGyroSample = 0;
+MPU6050 mpu(Wire);
 int leftPWM = 0, rightPWM = 0;
 
 // HARDWARE 2 - I2C communication. Select a TCA channel before reading its device.
@@ -158,18 +157,12 @@ bool encoderUsable(const Encoder &encoder) {
   return encoder.readOK && (encoder.status & 0x38) == 0x20;
 }
 
-// HARDWARE 6 - Gyro. Measure rotation and add it up to get the heading.
-// The original mpu.begin(3, 0) selects the +/-2000 degrees/second range.
-constexpr uint8_t GYRO_RANGE_SETTING = 0x18;
-constexpr uint8_t ACCEL_RANGE_SETTING = 0x00;  // Original +/-2 g range.
-constexpr float GYRO_COUNTS_PER_DPS = 16.4f;
-constexpr int GYRO_CALIBRATION_SAMPLES = 500;
-
-bool readGyroZ(float &rate) {
+// HARDWARE 6 - Gyro. MPU6050_light calculates the angle used by the original robot.
+bool sampleIMU() {
+  // Check communication separately because mpu.update() returns no status.
   uint8_t data[2];
-  if (!readReg(imuAddress, 0x47, data, sizeof(data))) return false;
-  const int16_t rawRate = int16_t((uint16_t(data[0]) << 8) | data[1]);
-  rate = rawRate / GYRO_COUNTS_PER_DPS;
+  if (!readReg(mpu.getAddress(), 0x47, data, sizeof(data))) return false;
+  mpu.update();
   return true;
 }
 
@@ -186,67 +179,39 @@ bool initIMU() {
       Serial.printf("IMU at 0x%02X returned unsupported ID 0x%02X.\n", unsigned(address), unsigned(id));
       continue;
     }
-    imuAddress = address;
+    mpu.setAddress(address);
     Serial.printf("IMU %s at 0x%02X, ID=0x%02X.\n",
                   id == 0x68 ? "MPU6050" : "MPU6500", unsigned(address), unsigned(id));
 
-    // 2. Wake the chip, apply the original settings, and verify both ranges.
-    if (!writeReg(address, 0x6B, 0x01)) {
-      Serial.println("IMU ERROR: wake command failed.");
-      return false;
-    }
-    delay(100);
-    if (!writeReg(address, 0x6C, 0x00) || !writeReg(address, 0x19, 0x00) ||
-        !writeReg(address, 0x1A, 0x00) || !writeReg(address, 0x1B, GYRO_RANGE_SETTING) ||
-        !writeReg(address, 0x1C, ACCEL_RANGE_SETTING)) {
-      Serial.println("IMU ERROR: configuration write failed.");
+    // 2. Initialize the library with the exact settings from original mpu.ino.
+    const uint8_t status = mpu.begin(3, 0);
+    if (status != 0) {
+      Serial.printf("IMU ERROR: mpu.begin(3, 0) returned %u.\n", unsigned(status));
       return false;
     }
     uint8_t gyroConfig = 0;
-    if (!readReg(address, 0x1B, &gyroConfig, 1) || (gyroConfig & 0x18) != GYRO_RANGE_SETTING) {
+    if (!readReg(address, 0x1B, &gyroConfig, 1) || (gyroConfig & 0x18) != 0x18) {
       Serial.println("IMU ERROR: gyro range setting did not read back.");
       return false;
     }
     uint8_t accelConfig = 0;
-    if (!readReg(address, 0x1C, &accelConfig, 1) || (accelConfig & 0x18) != ACCEL_RANGE_SETTING) {
+    if (!readReg(address, 0x1C, &accelConfig, 1) || (accelConfig & 0x18) != 0x00) {
       Serial.println("IMU ERROR: accelerometer range setting did not read back.");
       return false;
     }
     Serial.println("Gyro range +/-2000 deg/s. Accelerometer range +/-2 g. Keep still.");
 
-    // 3. Average stationary Z readings to measure the gyro's zero offset.
-    float minimum = 2000, maximum = -2000, total = 0;
-    for (int i = 0; i < GYRO_CALIBRATION_SAMPLES; ++i) {
-      float rate;
-      if (!readGyroZ(rate)) {
-        Serial.println("IMU ERROR: gyro read failed during calibration.");
-        return false;
-      }
-      minimum = min(minimum, rate);
-      maximum = max(maximum, rate);
-      total += rate;
-      delay(1);
-    }
-    if (maximum - minimum > 5.0f) {
-      Serial.println("IMU ERROR: gyro changed during calibration. Hold still and reset.");
+    // 3. Calibrate the gyro and accelerometer as in the original sketch.
+    mpu.calcOffsets(true, true);
+    if (!sampleIMU()) {
+      Serial.println("IMU ERROR: gyro read failed after calibration.");
       return false;
     }
-    gyroBias = total / GYRO_CALIBRATION_SAMPLES;
-    lastGyroSample = micros();
+    mpu.resetAngleZ();
     return true;
   }
   Serial.println("IMU ERROR: no MPU6050 or MPU6500 found at 0x68 or 0x69. Check the main I2C wiring.");
   return false;
-}
-
-bool sampleIMU() {
-  float rate;
-  if (!readGyroZ(rate)) return false;
-  const uint32_t now = micros();
-  const uint32_t elapsed = now - lastGyroSample;
-  if (elapsed <= 120000) yaw += (rate - gyroBias) * (elapsed / 1000000.0f);
-  lastGyroSample = now;
-  return true;
 }
 
 // HARDWARE 7 - Floor color sensor and its light.

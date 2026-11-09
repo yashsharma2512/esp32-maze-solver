@@ -20,6 +20,8 @@ Open `MAZESOLVER.ino` with `Hardware.h` in the same folder. Select **ESP32 Dev
 Module**, upload, and press EN/Reset. Leave motor power off for this and the
 next step. Keep the robot still while it calibrates the gyro.
 
+- **`MPU6050 has no member named resetAngleZ`** means the library needs the
+  original [heading reset helper](README.md#mpu-library-setup).
 - **`TCA9548A at 0x70 did not respond`** means to check the TCA power, ground,
   GPIO21/22, and address jumpers before looking at an individual sensor.
 - **`0x39 is on the main bus`** means to check where the AS7341 and APDS wires
@@ -30,7 +32,7 @@ next step. Keep the robot still while it calibrates the gyro.
 Look for three APDS `READY` messages, `Gyro calibrated.`, and `AS7341 CH2 ready`.
 The main sketch identifies the IMU by model and address. A typical MPU6050
 prints `IMU MPU6050 at 0x68, ID=0x68.` It verifies the gyro and accelerometer
-ranges before taking 500 stationary Z readings. Keep the robot still until
+ranges before calibrating both sensors. Keep the robot still until
 `Gyro calibrated.` appears. If startup fails, look for the specific
 `IMU ERROR` line above it.
 If one part is unclear, upload its test sketch by itself. Re-upload the main
