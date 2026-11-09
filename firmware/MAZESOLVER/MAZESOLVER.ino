@@ -124,24 +124,27 @@ void beginCorner() {
 }
 
 bool frontBlocked() {
-  return frontAPDS.raw >= FRONT_BLOCKED || frontAPDS.filtered >= FRONT_BLOCKED;
+  return frontAPDS.saturated || frontAPDS.raw >= FRONT_BLOCKED ||
+         frontAPDS.filtered >= FRONT_BLOCKED;
 }
 
 void followWalls() {
+  const bool leftOpen = !leftAPDS.saturated && leftAPDS.filtered <= SIDE_OPEN;
+  const bool rightOpen = !rightAPDS.saturated && rightAPDS.filtered <= SIDE_OPEN;
   if (frontBlocked()) {
     // Prefer left, then right, then a U-turn when both sides are closed.
-    if (leftAPDS.filtered <= SIDE_OPEN) beginTurn(-1, 90);
-    else if (rightAPDS.filtered <= SIDE_OPEN) beginTurn(1, 90);
+    if (leftOpen) beginTurn(-1, 90);
+    else if (rightOpen) beginTurn(1, 90);
     else beginTurn(-1, 180);
     return;
   }
-  if (leftWallSeen && leftAPDS.filtered <= SIDE_OPEN) {
+  if (leftWallSeen && leftOpen) {
     beginCorner();
     return;
   }
 
-  const bool leftWall = leftAPDS.filtered >= SIDE_PRESENT;
-  const bool rightWall = rightAPDS.filtered >= SIDE_PRESENT;
+  const bool leftWall = !leftAPDS.saturated && leftAPDS.filtered >= SIDE_PRESENT;
+  const bool rightWall = !rightAPDS.saturated && rightAPDS.filtered >= SIDE_PRESENT;
   if (leftWall) leftWallSeen = true;
 
   // Original straight-line P+D control for two walls, one wall, or open space.
@@ -216,8 +219,8 @@ void controlStep(uint32_t now) {
     return;
   }
 
-  if (!samplesOK || saturated || millis() - now > MAX_CONTROL_GAP_MS) {
-    stopRun(saturated ? "APDS proximity saturated" : "navigation sensor unavailable or late");
+  if (!samplesOK || millis() - now > MAX_CONTROL_GAP_MS) {
+    stopRun("navigation sensor unavailable or late");
     return;
   }
 
@@ -228,7 +231,7 @@ void controlStep(uint32_t now) {
     case Motion::Settle:
       if (now - phaseStarted >= TURN_SETTLE_MS) {
         previousError = 0;
-        leftWallSeen = leftAPDS.filtered >= SIDE_PRESENT;
+        leftWallSeen = !leftAPDS.saturated && leftAPDS.filtered >= SIDE_PRESENT;
         motion = Motion::Follow;
       }
       break;
@@ -237,9 +240,11 @@ void controlStep(uint32_t now) {
 }
 
 void printStatus() {
-  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
+  Serial.printf("%s APDS L=%u R=%u F=%u sat=%u/%u/%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
                 motionName(), unsigned(leftAPDS.raw), unsigned(rightAPDS.raw),
-                unsigned(frontAPDS.raw), yaw, long(leftEncoder.counts),
+                unsigned(frontAPDS.raw), unsigned(leftAPDS.saturated),
+                unsigned(rightAPDS.saturated), unsigned(frontAPDS.saturated),
+                yaw, long(leftEncoder.counts),
                 encoderUsable(leftEncoder) ? "OK" : "CHECK", long(rightEncoder.counts),
                 encoderUsable(rightEncoder) ? "OK" : "CHECK", leftPWM, rightPWM, lastStop);
 }
