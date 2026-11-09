@@ -1,13 +1,14 @@
 # Main maze-solver firmware
 
 Use the [step-by-step debugging guide](DEBUGGING.md) to test one part at a
-time. Its step numbers match the comments in `MAZESOLVER.ino`.
+time. Start in [MAZESOLVER.ino](MAZESOLVER.ino) and read `setup()` and `loop()`
+from top to bottom. Each helper lives in a separate tab from the main sketch.
 
-Open `MAZESOLVER.ino` with `Hardware.h` in the same sketch folder. In Arduino
-IDE, select **ESP32 Dev Module** and the robot's USB port. In Library Manager,
-install **Adafruit AS7341**, **Adafruit BusIO**, and **MPU6050_light** (tested
-with 1.2.1). Check the [MPU library setup](#mpu-library-setup) before compiling.
-Upload and open Serial Monitor at **115200 baud**.
+Open `MAZESOLVER.ino` in Arduino IDE and keep all the tabs in the same
+`MAZESOLVER` folder. Select **ESP32 Dev Module** and the robot's USB port.
+In Library Manager, install **Adafruit AS7341**, **Adafruit BusIO**, and
+**MPU6050_light** (tested with 1.2.1). Check the [MPU library setup](#mpu-library-setup)
+before compiling. Upload and open Serial Monitor at **115200 baud**.
 
 | Device | Connection |
 | --- | --- |
@@ -20,6 +21,20 @@ Upload and open Serial Monitor at **115200 baud**.
 | TB6612 left IN1 / IN2 / PWM | GPIO25 / GPIO26 / GPIO27 |
 | TB6612 right IN1 / IN2 / PWM | GPIO18 / GPIO19 / GPIO23 |
 | TB6612 STBY | GPIO33 |
+
+## Where to look in the code
+
+| Step | Tab | What it does |
+| --- | --- | --- |
+| 1 | [Settings.h](Settings.h) | Pins, I²C addresses, and tuning values |
+| 2 | [02_Startup.ino](02_Startup.ino) | Starts Serial and checks the I²C bus |
+| 3 | [03_Sensors.ino](03_Sensors.ino) | Starts the sensors, takes readings, and reports faults |
+| 4 | [04_Controls.ino](04_Controls.ino) | Handles BOOT, Serial, and the hand-gesture start |
+| 5 | [05_Movement.ino](05_Movement.ino) | Drives straight, turns, and moves a set distance |
+| 6 | [06_WallFollow.ino](06_WallFollow.ino) | Chooses the next move from the wall readings |
+
+The individual hardware tabs are linked in the [sensor and motor checks](DEBUGGING.md).
+`Robot.h` declares readings and run state shared by the tabs.
 
 ## MPU library setup
 
@@ -62,8 +77,8 @@ Start at `loop()` in `MAZESOLVER.ino`. It reads the sensors, then calls
 `followLeftWall()` when the robot is running. That function reads in movement
 order. At a left opening it calls `moveCornerDistance()`, `turn90()`, and
 `moveCornerDistance()` again for the backup. Each movement calls
-`updateDuringMove()` to check the sensors and stop controls. Adjust the tuning
-values at the top of the sketch. `Hardware.h` holds the wiring and device reads.
+`updateDuringMove()` to check the sensors and stop controls. The tuning
+values and pin assignments are in [Settings.h](Settings.h).
 
 The firmware follows the left-hand rule continuously. It uses the original
 APDS smoothing, proportional/derivative steering, gyro heading correction,
