@@ -1,8 +1,11 @@
-# ESP32 Maze Solver Hardware Tests
+# ESP32 Maze Solver
 
-Standalone Arduino hardware tests for a maze robot using a classic 38-pin
-ESP32-WROOM-32 development board. This repository currently contains hardware
-tests, not the complete maze-solving firmware.
+Arduino firmware and standalone hardware tests for a maze robot using a classic
+38-pin ESP32-WROOM-32 development board.
+
+The [main firmware](firmware/MAZESOLVER/README.md) runs continuous left-hand
+wall following with the current three-APDS wiring and gyro turns. Open
+`firmware/MAZESOLVER/MAZESOLVER.ino` in Arduino IDE.
 
 ## Sketches
 
@@ -113,12 +116,8 @@ one tile forward, `b` for one tile backward, or `x` to stop; BOOT starts or stop
 a forward move. Each move tares both encoders before driving. Verify wheel
 direction and encoder movement with the wheels lifted before floor testing.
 
-The robot's reported APDS map for future navigation is **left channel 0, right
-channel 1, front channel 7**. The original firmware expects four APDS readings,
-including two front sensors, so its navigation logic needs adaptation to this
-three-sensor layout. Its `dfs()` function is currently a TODO. A DFS search will
-need reliable tile moves, calibrated wall thresholds, and measured 90-degree
-turns before it can safely explore and backtrack.
+The main firmware uses the robot's **left channel 0, right channel 1, and front
+channel 7** APDS layout. Use the tile test separately when calibrating distance.
 
 ## Unified robot test and Wi-Fi dashboard
 
