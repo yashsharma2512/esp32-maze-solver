@@ -133,17 +133,16 @@ The gyro turn controller uses the original gains, PWM limit of 165, and a
 1.1-second limit per 90° turn. If it times out before reaching the target,
 the sketch logs the angle, pauses for 100 ms, and resumes wall following from
 fresh readings. The ESP32 checks motion and sensors every 10 ms and can stop
-with BOOT or `x` during a maneuver. Navigation stops on an APDS I²C failure,
-an IMU failure, or an encoder maneuver failure. Corner moves require two usable
-encoder magnets.
+with BOOT or `x` during a maneuver. The firmware retries a failed APDS read
+or IMU communication check once. If a retry also fails, the robot stops.
+Encoder reads run in standby and during distance moves. Corner
+distance moves require two usable encoders.
 The AS7341 prints while stopped so its library cannot delay motor control.
 The [standalone color test](../../README.md#as7341-color-sensor-test) can check
 the sensor independently. Use the [main sketch's calibration mode](#save-and-test-floor-colors)
 to save references to EEPROM.
 
-If the run stops with `navigation sensor unavailable or late`, copy the next
-`NAV FAULT` line. It shows the motion phase and the read result and duration for
-each APDS channel, the IMU, and both encoders. Any APDS or IMU failure stops the
-run. Encoder read failures contribute to the measured cycle time, but by
-themselves only stop encoder-based maneuvers. A cycle over 120 ms stops the run
-even when each sensor eventually responds.
+If the run stops, copy the `STOP` line and any `NAV FAULT` line just below it.
+`NAV FAULT` shows the motion phase and each sensor's result and duration.
+The firmware stops a run when a read cycle exceeds 120 ms. An encoder entry
+marked `SKIP` means that cycle did not sample the encoder.

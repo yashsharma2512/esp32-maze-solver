@@ -33,3 +33,7 @@ extern const char *phase, *lastStop; // 04_Controls.ino
 extern bool hadLeftWall;            // 06_WallFollow.ino
 extern int previousWallError;       // 06_WallFollow.ino
 extern bool colorCalibrationActive; // ColorCalibration.ino
+
+// Turns and steering only need wall readings and heading.
+bool readSensors(bool needEncoders = false);
+bool updateDuringMove(bool needEncoders = false);

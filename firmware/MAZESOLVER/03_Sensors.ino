@@ -17,19 +17,24 @@ void setupSensors() {
   setupColorSensor();
 }
 
-void printStatus() {
+void printStatus(bool sampledEncoders) {
   static uint32_t lastPrint = 0;
   if (millis() - lastPrint < 250) return;
   lastPrint = millis();
+  const char *leftStatus = "SKIP";
+  const char *rightStatus = "SKIP";
+  if (sampledEncoders) {
+    leftStatus = encoderUsable(leftEncoder) ? "OK" : "CHECK";
+    rightStatus = encoderUsable(rightEncoder) ? "OK" : "CHECK";
+  }
   Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
                 phase, unsigned(leftAPDS.raw), unsigned(rightAPDS.raw), unsigned(frontAPDS.raw),
-                mpu.getAngleZ(), long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
-                long(rightEncoder.counts), encoderUsable(rightEncoder) ? "OK" : "CHECK",
+                mpu.getAngleZ(), long(leftEncoder.counts), leftStatus, long(rightEncoder.counts), rightStatus,
                 leftPWM, rightPWM, lastStop);
 }
 
 // Read one set of sensors. Timestamp each read so an intermittent fault is traceable.
-bool readSensors() {
+bool readSensors(bool needEncoders) {
   const uint32_t start = millis();
   if (running && start - lastSample > SENSOR_LIMIT_MS) stopRun("navigation loop ran late");
   lastSample = start;
@@ -43,15 +48,31 @@ bool readSensors() {
   const uint32_t frontDone = millis();
   const bool gyroOK = gyroReady && sampleIMU();
   const uint32_t gyroDone = millis();
-  const bool leftEncoderOK = sampleEncoder(leftEncoder);
-  const uint32_t leftEncoderDone = millis();
-  const bool rightEncoderOK = sampleEncoder(rightEncoder);
+  const bool sensorsOK = leftOK && rightOK && frontOK && gyroOK;
+
+  // Read encoders for distance moves or idle diagnostics. Skip them on a bad navigation cycle.
+  bool sampledEncoders = false;
+  const char *leftEncoderResult = "SKIP";
+  const char *rightEncoderResult = "SKIP";
+  uint32_t leftEncoderDone = gyroDone;
+  uint32_t rightEncoderDone = gyroDone;
+  if (!running || (needEncoders && sensorsOK && gyroDone - start <= SENSOR_LIMIT_MS)) {
+    sampledEncoders = true;
+    leftEncoderResult = sampleEncoder(leftEncoder) ? "OK" : "FAIL";
+    leftEncoderDone = millis();
+    rightEncoderResult = sampleEncoder(rightEncoder) ? "OK" : "FAIL";
+    rightEncoderDone = millis();
+  }
   const uint32_t end = millis();
 
-  const bool sensorsOK = leftOK && rightOK && frontOK && gyroOK;
   if (running && (!sensorsOK || end - start > SENSOR_LIMIT_MS)) {
     const char *faultPhase = phase;
-    stopRun("navigation sensor unavailable or late");
+    const char *reason = "sensor read cycle over time limit";
+    if (!leftOK) reason = "left APDS CH0 read failed";
+    else if (!rightOK) reason = "right APDS CH1 read failed";
+    else if (!frontOK) reason = "front APDS CH7 read failed";
+    else if (!gyroOK) reason = "IMU read failed";
+    stopRun(reason);
     Serial.printf("NAV FAULT phase=%s cycle=%ums limit=%ums | CH0=%s/%ums CH1=%s/%ums CH7=%s/%ums "
                   "IMU=%s/%ums ENC5=%s/%ums ENC4=%s/%ums\n",
                   faultPhase, unsigned(end - start), unsigned(SENSOR_LIMIT_MS),
@@ -59,10 +80,10 @@ bool readSensors() {
                   rightOK ? "OK" : "FAIL", unsigned(rightDone - leftDone),
                   frontOK ? "OK" : "FAIL", unsigned(frontDone - rightDone),
                   gyroOK ? "OK" : "FAIL", unsigned(gyroDone - frontDone),
-                  leftEncoderOK ? "OK" : "FAIL", unsigned(leftEncoderDone - gyroDone),
-                  rightEncoderOK ? "OK" : "FAIL", unsigned(end - leftEncoderDone));
+                  leftEncoderResult, unsigned(leftEncoderDone - gyroDone),
+                  rightEncoderResult, unsigned(rightEncoderDone - leftEncoderDone));
     Serial.println("STEP 3: Copy the NAV FAULT line and follow the sensor checks in DEBUGGING.md.");
   }
-  printStatus();
+  printStatus(sampledEncoders);
   return sensorsOK;
 }

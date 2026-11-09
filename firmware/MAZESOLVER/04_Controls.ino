@@ -85,6 +85,7 @@ bool tryStartRun(bool sensorsOK) {
       previousWallError = 0;
       lastStop = "none";
       Serial.println("START: left-wall following. Press BOOT or send x to stop.");
+      lastSample = millis();  // Start the timing check after the idle reads.
       return true;
     }
     Serial.println("START BLOCKED: check the APDS readings and IMU.");

@@ -2,9 +2,10 @@
 MPU6050 mpu(Wire);
 
 bool sampleIMU() {
-  // Check communication separately because mpu.update() returns no status.
+  // Retry the communication check once because mpu.update() returns no status.
   uint8_t data[2];
-  if (!readReg(mpu.getAddress(), 0x47, data, sizeof(data))) return false;
+  if (!readReg(mpu.getAddress(), 0x47, data, sizeof(data)) &&
+      !readReg(mpu.getAddress(), 0x47, data, sizeof(data))) return false;
   mpu.update();
   return true;
 }

@@ -15,9 +15,14 @@ bool initAPDS(const Proximity &sensor) {
          readReg(APDS_ADDR, 0x8E, &pulse, 1) && pulse == 0x87;
 }
 
-bool sampleAPDS(Proximity &sensor) {
+bool readAPDSProximity(Proximity &sensor) {
   // PDATA is the sensor's one-byte proximity reading (0 to 255).
-  if (!selectChannel(sensor.channel) || !readReg(APDS_ADDR, 0x9C, &sensor.raw, 1)) {
+  return selectChannel(sensor.channel) && readReg(APDS_ADDR, 0x9C, &sensor.raw, 1);
+}
+
+bool sampleAPDS(Proximity &sensor) {
+  // Re-select the channel and retry once before treating a read as failed.
+  if (!readAPDSProximity(sensor) && !readAPDSProximity(sensor)) {
     sensor.filterReady = false;
     return false;
   }

@@ -1,14 +1,14 @@
 // STEP 5 - Carry out a move while checking the sensors and stop button.
 // Every movement loop calls this before its next motor command.
 // BOOT, x, and sensor failures can stop any maneuver.
-bool updateDuringMove() {
+bool updateDuringMove(bool needEncoders) {
   while (running && millis() - lastSample < SAMPLE_MS) {
     readControls();
     delay(1);
   }
   readControls();
   if (!running) return false;
-  readSensors();
+  readSensors(needEncoders);
   return running;
 }
 
@@ -48,6 +48,8 @@ void driveStraightBesideWalls() {
 bool moveCornerDistance(float targetMM) {
   const bool forward = targetMM > 0;
   phase = forward ? "CORNER_ADVANCE" : "CORNER_REVERSE";
+  // Take a fresh encoder reading before using it as the distance starting point.
+  if (!updateDuringMove(true)) return false;
   if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
     stopRun("corner maneuver needs both encoders");
     return false;
@@ -57,7 +59,7 @@ bool moveCornerDistance(float targetMM) {
   const uint32_t start = millis();
   Serial.printf("%s %.0f mm\n", phase, fabsf(targetMM));
 
-  while (updateDuringMove()) {
+  while (updateDuringMove(true)) {
     if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
       stopRun("encoder read or magnet fault during corner maneuver");
       return false;

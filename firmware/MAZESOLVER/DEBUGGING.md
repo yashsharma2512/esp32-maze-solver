@@ -68,13 +68,16 @@ in the main sketch. After `save red` succeeds, reset the ESP32 and use
 `c` then `list` to confirm the reference was saved. If a command appears to
 do nothing, check that Serial Monitor is set to **Newline**.
 
-If the main sketch stops with a **`NAV FAULT`** line, copy that whole line.
-For example, `CH7=FAIL/20ms` means the front APDS read path failed after 20 ms.
-Check that sensor and its TCA channel. If the APDS and IMU entries all say
-`OK` but `cycle` is over 120 ms, find the slowest read on that line. An encoder
-can also take time on the shared bus. `CHECK` next to an encoder on a normal
-status line points to a read or magnet issue. Use the encoder test to tell
-which one.
+If the main sketch stops, scroll up to the first **`STOP`** line and copy
+the **`NAV FAULT`** line below it if present. The periodic `last_stop` field
+repeats the same reason. For example, `CH7=FAIL/20ms` means both attempts to
+read the front APDS failed in 20 ms total. Check that sensor and TCA CH7.
+If the APDS and IMU entries all say `OK` but `cycle` is over 120 ms, look for
+the slowest read on that line.
+
+Encoder entries show `SKIP` during steering and turns. While stopped, or
+during a corner distance move, `CHECK` means an encoder read failed or its
+magnet was missing or out of range. Use the encoder test to tell which one.
 
 ## Step 4 — Check start and stop with the wheels lifted
 
