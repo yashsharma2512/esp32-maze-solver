@@ -39,25 +39,29 @@ AS7341** and **Adafruit BusIO** if needed. Upload and open Serial Monitor at
 ## Navigation and tuning
 
 The firmware follows the left-hand rule continuously. It uses the original
-APDS smoothing and proportional/derivative steering gains with a starting
-PWM of 70. A front wall triggers a left turn if the left side is open, a
-right turn if the right side is open, or a U-turn at a dead end. The gyro
-measures the turn angle. At a detected left opening, the robot uses the two
-encoders to clear the corner before turning. This local maneuver starts with
-the original 220 mm offset and can end earlier at a front wall.
+APDS smoothing, proportional/derivative steering, gyro heading correction,
+and base PWM of 100. `GYRO_Z_SIGN` assumes the IMU Z axis points up. Use `-1`
+if the board is mounted with Z pointing down.
 
-The starting constants in `MAZESOLVER.ino` include the front threshold of 40,
-side-open threshold of 9, side-wall threshold of 25, and side steering target
-of 50. These are proximity counts. Validate them against actual wall surfaces
-and sensor angles. Check the corner offset and the 90° and 180° turns on the
-assembled robot before running a complete maze.
+At a left opening the robot advances up to 220 mm, turns 90° left, then
+backs up 30 mm. If the front is blocked, it pauses for 200 ms and chooses
+the turn from fresh side readings. At a dead end it turns left twice and
+reverses for one second at PWM 100. A single front-wall turn also uses the
+30 mm backup. The encoder-based moves end early if the front reading crosses
+the wall threshold.
 
-If a turn times out after 3 seconds for 90° or 5 seconds for 180°, the sketch
-logs the angle reached, ends the pivot, and rechecks the walls after a 150 ms
-settle. Wall following then resumes. The sketch uses APDS proximity counts for
-startup gestures, steering, and wall detection. Navigation stops on an APDS
-I²C failure, an IMU failure, or a corner clearance timeout. Corner clearance
-also requires two usable encoder magnets.
+The front wall test uses your single raw CH7 reading above 40. A filtered
+side reading of 9 or less counts as open for turns. Straight steering uses
+the whole-number filtered side count above 25 and a target of 50. Validate
+these values against the actual wall surfaces and sensor angles.
+
+The gyro turn controller uses the original gains, PWM limit of 165, and a
+1.1-second limit per 90° turn. If it times out before reaching the target,
+the sketch logs the angle, pauses for 100 ms, and resumes wall following from
+fresh readings. The ESP32 checks motion and sensors every 10 ms and can stop
+with BOOT or `x` during a maneuver. Navigation stops on an APDS I²C failure,
+an IMU failure, or an encoder maneuver failure. Corner moves require two usable
+encoder magnets.
 The AS7341 prints while stopped so its library cannot delay motor control.
 Use the [standalone color calibration test](../../README.md#as7341-color-sensor-test)
 to capture black and white references and compare your floor materials. The main

@@ -2,35 +2,46 @@
 #include "Hardware.h"
 
 constexpr int START_BUTTON_PIN = 0;
-constexpr uint32_t CONTROL_MS = 20, MAX_CONTROL_GAP_MS = 120;
-constexpr uint32_t PRINT_MS = 250, TURN_SETTLE_MS = 150;
+constexpr uint32_t CONTROL_MS = 10, MAX_CONTROL_GAP_MS = 120;
+constexpr uint32_t PRINT_MS = 250;
 constexpr uint8_t GESTURE_HIGH = 150, GESTURE_RELEASE = 100;
 constexpr uint8_t SIDE_OPEN = 9, SIDE_PRESENT = 25, FRONT_BLOCKED = 40;
-constexpr float WALL_TARGET = 50.0f, KP = 0.85f, KD = 1.5f;
-constexpr int BASE_PWM = 70, MAX_STEERING = 25;
-constexpr int MIN_TURN_PWM = 55, MAX_TURN_PWM = 100;
-constexpr float WHEEL_DIAMETER_MM = 70.0f, CORNER_ADVANCE_MM = 220.0f;
-constexpr uint32_t CORNER_TIMEOUT_MS = 4500;
+constexpr int WALL_TARGET = 50, MAX_WALL_ERROR = 75;
+constexpr float KP = 0.85f, KD = 1.5f, GYRO_ASSIST = 1.5f;
+constexpr int GYRO_Z_SIGN = 1; // Use -1 if the IMU is mounted upside down.
+constexpr int BASE_PWM = 100, MAX_STEERING = 120;
+constexpr float TURN_KP = 12.5f, TURN_KD = 0.2f;
+constexpr int MIN_TURN_PWM = 55, MAX_TURN_PWM = 165;
+constexpr uint32_t TURN_TIMEOUT_MS = 1100, TURN_TARGET_HOLD_MS = 200;
+constexpr float WHEEL_DIAMETER_MM = 70.0f;
+constexpr float CORNER_ADVANCE_MM = 220.0f, TURN_REVERSE_MM = 30.0f;
+constexpr uint32_t DISTANCE_TIMEOUT_MS = 4500, DEAD_END_REVERSE_MS = 1000;
 
-enum class Motion { Idle, Follow, CornerAdvance, Turn, Settle };
+enum class Motion { Idle, Follow, DistanceMove, Turn, Pause, DeadEndReverse };
+enum class Step { Follow, ChooseFrontTurn, LeftAtOpening, BackUp, SecondLeft, DeadEndReverse };
 enum class Gesture { WaitClear, LeftHand, RightHand, Release };
 Motion motion = Motion::Idle;
+Step afterPause = Step::Follow, afterTurn = Step::BackUp;
 Gesture gesture = Gesture::WaitClear;
 bool busReady = false, apdsReady = false, imuReady = false;
 bool startRequested = false, leftWallSeen = false;
 const char *lastStop = "none";
-uint32_t lastControl = 0, lastPrint = 0, phaseStarted = 0;
-int32_t cornerLeftStart = 0, cornerRightStart = 0;
-float previousError = 0, turnStartYaw = 0, turnDegrees = 0;
+uint32_t lastControl = 0, lastPrint = 0, phaseStarted = 0, pauseLength = 0;
+int32_t distanceLeftStart = 0, distanceRightStart = 0;
+float distanceTarget = 0, headingYaw = 0, turnStartYaw = 0;
+int previousError = 0, previousTurnError = 0;
+bool turnReachedTarget = false;
+uint32_t turnTargetAt = 0;
 int turnDirection = -1; // Left = -1, right = 1.
 
 const char *motionName() {
   switch (motion) {
     case Motion::Idle: return "IDLE";
     case Motion::Follow: return "FOLLOW";
-    case Motion::CornerAdvance: return "CORNER_ADVANCE";
+    case Motion::DistanceMove: return distanceTarget > 0 ? "CORNER_ADVANCE" : "CORNER_REVERSE";
     case Motion::Turn: return "TURN";
-    case Motion::Settle: return "SETTLE";
+    case Motion::Pause: return "PAUSE";
+    case Motion::DeadEndReverse: return "DEAD_END_REVERSE";
   }
   return "UNKNOWN";
 }
@@ -93,102 +104,152 @@ void updateGesture() {
 }
 
 void beginRun() {
-  leftWallSeen = leftAPDS.filtered >= SIDE_PRESENT;
+  leftWallSeen = leftAPDS.filtered > SIDE_OPEN;
   previousError = 0;
+  headingYaw = yaw;
   lastStop = "none";
   motion = Motion::Follow;
   Serial.println("START: continuous left-wall following. Send x or press BOOT to stop.");
 }
 
-void beginTurn(int direction, float degrees) {
+void beginPause(Step next, uint32_t duration, uint32_t now) {
   stopMotors();
-  turnDirection = direction;
-  turnDegrees = degrees;
-  turnStartYaw = yaw;
-  phaseStarted = millis();
-  motion = Motion::Turn;
-  Serial.printf("TURN: %s %.0f degrees\n", direction < 0 ? "LEFT" : "RIGHT", degrees);
+  afterPause = next;
+  pauseLength = duration;
+  phaseStarted = now;
+  motion = Motion::Pause;
 }
 
-void beginCorner() {
+void beginTurn(int direction, Step next, uint32_t now) {
+  stopMotors();
+  turnDirection = direction;
+  afterTurn = next;
+  turnStartYaw = yaw;
+  previousTurnError = 0;
+  turnReachedTarget = false;
+  phaseStarted = now;
+  motion = Motion::Turn;
+  Serial.printf("TURN: %s 90 degrees\n", direction < 0 ? "LEFT" : "RIGHT");
+}
+
+void beginDistanceMove(float targetMM, uint32_t now) {
   if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
-    stopRun("left opening found, but corner clearance needs both encoders");
+    stopRun("corner maneuver needs both encoders");
     return;
   }
-  cornerLeftStart = leftEncoder.counts;
-  cornerRightStart = rightEncoder.counts;
-  phaseStarted = millis();
-  motion = Motion::CornerAdvance;
-  Serial.println("LEFT opening: advance to clear the corner.");
+  distanceLeftStart = leftEncoder.counts;
+  distanceRightStart = rightEncoder.counts;
+  distanceTarget = targetMM;
+  phaseStarted = now;
+  motion = Motion::DistanceMove;
+  Serial.printf("%s %.0f mm\n", targetMM > 0 ? "CORNER_ADVANCE" : "CORNER_REVERSE", fabsf(targetMM));
 }
 
 bool frontBlocked() {
-  return frontAPDS.raw >= FRONT_BLOCKED || frontAPDS.filtered >= FRONT_BLOCKED;
+  return frontAPDS.raw > FRONT_BLOCKED;
 }
 
-void followWalls() {
-  const bool leftOpen = leftAPDS.filtered <= SIDE_OPEN;
-  const bool rightOpen = rightAPDS.filtered <= SIDE_OPEN;
+int gyroCorrection() {
+  return int(GYRO_Z_SIGN * (yaw - headingYaw) * GYRO_ASSIST);
+}
+
+void followWalls(uint32_t now) {
+  const bool leftPresentForTurn = leftAPDS.filtered > SIDE_OPEN;
+  const bool leftOpening = leftWallSeen && !leftPresentForTurn;
+  leftWallSeen = leftPresentForTurn;
+  if (leftOpening) {
+    beginDistanceMove(CORNER_ADVANCE_MM, now);
+    return;
+  }
   if (frontBlocked()) {
-    // Prefer left, then right, then a U-turn when both sides are closed.
-    if (leftOpen) beginTurn(-1, 90);
-    else if (rightOpen) beginTurn(1, 90);
-    else beginTurn(-1, 180);
-    return;
-  }
-  if (leftWallSeen && leftOpen) {
-    beginCorner();
+    beginPause(Step::ChooseFrontTurn, 200, now);
     return;
   }
 
-  const bool leftWall = leftAPDS.filtered >= SIDE_PRESENT;
-  const bool rightWall = rightAPDS.filtered >= SIDE_PRESENT;
-  if (leftWall) leftWallSeen = true;
-
-  // Original straight-line P+D control for two walls, one wall, or open space.
-  float error = 0;
-  if (leftWall && rightWall) error = leftAPDS.filtered - rightAPDS.filtered;
-  else if (leftWall) error = leftAPDS.filtered - WALL_TARGET;
-  else if (rightWall) error = WALL_TARGET - rightAPDS.filtered;
-  const int steering = int(constrain(KP * error + KD * (error - previousError),
-                                    -float(MAX_STEERING), float(MAX_STEERING)));
+  const int leftValue = int(leftAPDS.filtered), rightValue = int(rightAPDS.filtered);
+  const bool leftWall = leftValue > SIDE_PRESENT, rightWall = rightValue > SIDE_PRESENT;
+  int error = 0;
+  if (leftWall && rightWall) error = leftValue - rightValue;
+  else if (leftWall) error = leftValue - WALL_TARGET;
+  else if (rightWall) error = WALL_TARGET - rightValue;
+  error = constrain(error, -MAX_WALL_ERROR, MAX_WALL_ERROR);
+  const int steering = constrain(int(KP * error) + int(KD * (error - previousError)),
+                                 -MAX_STEERING, MAX_STEERING);
   previousError = error;
-  moveMotor(BASE_PWM + steering, BASE_PWM - steering);
+  const int gyro = gyroCorrection();
+  moveMotor(BASE_PWM + steering + gyro, BASE_PWM - steering - gyro);
 }
 
-void advanceAtCorner(uint32_t now) {
+void updateDistanceMove(uint32_t now) {
   if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
-    stopRun("encoder read or magnet fault during corner clearance");
+    stopRun("encoder read or magnet fault during corner maneuver");
     return;
   }
-  const float left = fabsf(float(leftEncoder.counts - cornerLeftStart));
-  const float right = fabsf(float(rightEncoder.counts - cornerRightStart));
-  const float distanceMM = (left + right) * 0.5f * PI * WHEEL_DIAMETER_MM / 4096.0f;
-  if (frontBlocked() || distanceMM >= CORNER_ADVANCE_MM) {
-    beginTurn(-1, 90);
-  } else if (now - phaseStarted > CORNER_TIMEOUT_MS) {
-    stopRun("corner clearance timed out");
+  const float left = fabsf(float(leftEncoder.counts - distanceLeftStart));
+  const float right = fabsf(float(rightEncoder.counts - distanceRightStart));
+  const float traveledMM = (left + right) * 0.5f * PI * WHEEL_DIAMETER_MM / 4096.0f;
+  const float remainingMM = fabsf(distanceTarget) - traveledMM;
+  if (frontBlocked() || remainingMM <= 0) {
+    beginPause(distanceTarget > 0 ? Step::LeftAtOpening : Step::Follow, 100, now);
+  } else if (now - phaseStarted >= DISTANCE_TIMEOUT_MS) {
+    stopRun("corner maneuver timed out");
   } else {
-    moveMotor(BASE_PWM, BASE_PWM);
+    const float remainingDegrees = remainingMM * 360.0f / (PI * WHEEL_DIAMETER_MM);
+    const int speed = constrain(int(1.9f * remainingDegrees), 60, 125);
+    const int drive = distanceTarget > 0 ? speed : -speed;
+    const int gyro = gyroCorrection();
+    moveMotor(drive + gyro, drive - gyro);
   }
 }
 
 void updateTurn(uint32_t now) {
   const float turned = fabsf(yaw - turnStartYaw);
-  const float remaining = turnDegrees - turned;
-  const bool reachedTarget = remaining <= 3.0f;
-  const uint32_t turnTimeout = turnDegrees > 90.0f ? 5000UL : 3000UL;
-  if (reachedTarget || now - phaseStarted >= turnTimeout) {
-    stopMotors();
-    phaseStarted = now;
-    motion = Motion::Settle;
-    if (!reachedTarget) {
-      Serial.printf("TURN TIMEOUT: %.1f of %.0f degrees. Rechecking walls.\n", turned, turnDegrees);
+  const int error = int(90.0f - turned);
+  if (!turnReachedTarget && error <= 0) {
+    turnReachedTarget = true;
+    turnTargetAt = now;
+  }
+  if (now - phaseStarted >= TURN_TIMEOUT_MS ||
+      (turnReachedTarget && now - turnTargetAt >= TURN_TARGET_HOLD_MS)) {
+    headingYaw = yaw;
+    if (!turnReachedTarget) {
+      Serial.printf("TURN TIMEOUT: %.1f of 90 degrees. Rechecking walls.\n", turned);
     }
+    beginPause(turnReachedTarget ? afterTurn : Step::Follow, 100, now);
     return;
   }
-  const int speed = constrain(int(2.0f * remaining), MIN_TURN_PWM, MAX_TURN_PWM);
+  int speed = constrain(int(TURN_KP * error + TURN_KD * (error - previousTurnError)),
+                        -MAX_TURN_PWM, MAX_TURN_PWM);
+  previousTurnError = error;
+  if (speed > 0 && speed < MIN_TURN_PWM) speed = MIN_TURN_PWM;
+  if (speed < 0 && speed > -MIN_TURN_PWM) speed = -MIN_TURN_PWM;
   moveMotor(turnDirection * speed, -turnDirection * speed);
+}
+
+void updatePause(uint32_t now) {
+  if (now - phaseStarted < pauseLength) return;
+  switch (afterPause) {
+    case Step::Follow:
+      previousError = 0;
+      leftWallSeen = leftAPDS.filtered > SIDE_OPEN;
+      motion = Motion::Follow;
+      break;
+    case Step::ChooseFrontTurn: {
+      const bool leftWall = leftAPDS.filtered > SIDE_OPEN;
+      const bool rightWall = rightAPDS.filtered > SIDE_OPEN;
+      if (leftWall && rightWall) beginTurn(-1, Step::SecondLeft, now);
+      else beginTurn(leftWall ? 1 : -1, Step::BackUp, now);
+      break;
+    }
+    case Step::LeftAtOpening: beginTurn(-1, Step::BackUp, now); break;
+    case Step::BackUp: beginDistanceMove(-TURN_REVERSE_MM, now); break;
+    case Step::SecondLeft: beginTurn(-1, Step::DeadEndReverse, now); break;
+    case Step::DeadEndReverse:
+      phaseStarted = now;
+      motion = Motion::DeadEndReverse;
+      moveMotor(-BASE_PWM, -BASE_PWM);
+      break;
+  }
 }
 
 void controlStep(uint32_t now) {
@@ -221,15 +282,16 @@ void controlStep(uint32_t now) {
     return;
   }
 
+  const uint32_t decisionTime = millis();
   switch (motion) {
-    case Motion::Follow: followWalls(); break;
-    case Motion::CornerAdvance: advanceAtCorner(now); break;
-    case Motion::Turn: updateTurn(now); break;
-    case Motion::Settle:
-      if (now - phaseStarted >= TURN_SETTLE_MS) {
-        previousError = 0;
-        leftWallSeen = leftAPDS.filtered >= SIDE_PRESENT;
-        motion = Motion::Follow;
+    case Motion::Follow: followWalls(decisionTime); break;
+    case Motion::DistanceMove: updateDistanceMove(decisionTime); break;
+    case Motion::Turn: updateTurn(decisionTime); break;
+    case Motion::Pause: updatePause(decisionTime); break;
+    case Motion::DeadEndReverse:
+      if (decisionTime - phaseStarted >= DEAD_END_REVERSE_MS) {
+        headingYaw = yaw;
+        beginPause(Step::Follow, 100, decisionTime);
       }
       break;
     case Motion::Idle: break;

@@ -125,13 +125,13 @@ void printSample(const ProximitySensor &sensor) {
   }
   Serial.printf(" filtered=%5.1f", sensor.filtered);
   if (&sensor == &front) {
-    const bool blocked = sensor.raw >= FRONT_BLOCKED || sensor.filtered >= FRONT_BLOCKED;
+    const bool blocked = sensor.raw > FRONT_BLOCKED;
     Serial.printf(" front=%s\n", blocked ? "BLOCKED" : "CLEAR");
     return;
   }
   const char *wall = "BETWEEN";
   if (sensor.filtered <= SIDE_OPEN) wall = "OPEN";
-  if (sensor.filtered >= SIDE_PRESENT) wall = "WALL";
+  if (int(sensor.filtered) > SIDE_PRESENT) wall = "WALL";
   Serial.printf(" side=%s\n", wall);
 }
 
@@ -158,7 +158,7 @@ void setup() {
   busReady = true;
   for (auto *sensor : sensors) sensor->ready = initAPDS(*sensor);
   Serial.println("Move a hand or wall sample toward each sensor separately.");
-  Serial.println("Side: OPEN <=9, WALL >=25. Front: BLOCKED >=40. Hand: HIGH >150, RELEASED <100.");
+  Serial.println("Side: OPEN <=9, WALL >=26. Front: raw BLOCKED >40. Hand: HIGH >150, RELEASED <100.");
 }
 
 void loop() {

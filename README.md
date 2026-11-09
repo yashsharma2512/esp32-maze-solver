@@ -105,8 +105,8 @@ as the target moves away. `valid` shows the PVALID bit. `sat=1` flags a saturate
 sample and the sketch excludes it from the filter. An initialization error on
 one channel leaves the other channels available for testing.
 
-`side=OPEN` uses a filtered count of 9 or less, and `side=WALL` starts at 25.
-`front=BLOCKED` starts at 40 on either the raw or filtered reading. On the side
+`side=OPEN` uses a filtered count of 9 or less, and `side=WALL` starts at 26.
+`front=BLOCKED` uses a raw reading above 40. On the side
 sensors, `hand=HIGH` requires raw above 150, and `hand=RELEASED` requires raw
 below 100. Use your maze walls at the intended distance to check the wall
 thresholds before driving.
