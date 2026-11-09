@@ -16,7 +16,6 @@ struct Proximity {
   uint8_t raw = 0;
   float filtered = 0;
   bool filterReady = false;
-  bool saturated = false;
 };
 Proximity leftAPDS{"left", 0}, rightAPDS{"right", 1}, frontAPDS{"front", 7};
 
@@ -109,18 +108,9 @@ bool initAPDS(const Proximity &sensor) {
 }
 
 bool sampleAPDS(Proximity &sensor) {
-  uint8_t status = 0;
-  if (!selectChannel(sensor.channel) || !readReg(APDS_ADDR, 0x93, &status, 1) ||
-      !readReg(APDS_ADDR, 0x9C, &sensor.raw, 1)) {
+  if (!selectChannel(sensor.channel) || !readReg(APDS_ADDR, 0x9C, &sensor.raw, 1)) {
     sensor.filterReady = false;
     return false;
-  }
-  sensor.saturated = (status & 0x40) != 0;
-  if (sensor.saturated) {
-    sensor.filterReady = false;
-    Wire.beginTransmission(APDS_ADDR);
-    Wire.write(uint8_t(0xE5)); // Clear the latched proximity saturation flag.
-    return Wire.endTransmission() == 0;
   }
   sensor.filtered = sensor.filterReady ? APDS_ALPHA * sensor.filtered +
       (1.0f - APDS_ALPHA) * sensor.raw : sensor.raw;

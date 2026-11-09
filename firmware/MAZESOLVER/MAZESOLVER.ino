@@ -84,8 +84,7 @@ void updateGesture() {
       }
       break;
     case Gesture::Release:
-      if (leftAPDS.raw < GESTURE_RELEASE && rightAPDS.raw < GESTURE_RELEASE &&
-          !leftAPDS.saturated && !rightAPDS.saturated && !frontAPDS.saturated) {
+      if (leftAPDS.raw < GESTURE_RELEASE && rightAPDS.raw < GESTURE_RELEASE) {
         startRequested = true;
         gesture = Gesture::WaitClear;
       }
@@ -124,13 +123,12 @@ void beginCorner() {
 }
 
 bool frontBlocked() {
-  return frontAPDS.saturated || frontAPDS.raw >= FRONT_BLOCKED ||
-         frontAPDS.filtered >= FRONT_BLOCKED;
+  return frontAPDS.raw >= FRONT_BLOCKED || frontAPDS.filtered >= FRONT_BLOCKED;
 }
 
 void followWalls() {
-  const bool leftOpen = !leftAPDS.saturated && leftAPDS.filtered <= SIDE_OPEN;
-  const bool rightOpen = !rightAPDS.saturated && rightAPDS.filtered <= SIDE_OPEN;
+  const bool leftOpen = leftAPDS.filtered <= SIDE_OPEN;
+  const bool rightOpen = rightAPDS.filtered <= SIDE_OPEN;
   if (frontBlocked()) {
     // Prefer left, then right, then a U-turn when both sides are closed.
     if (leftOpen) beginTurn(-1, 90);
@@ -143,8 +141,8 @@ void followWalls() {
     return;
   }
 
-  const bool leftWall = !leftAPDS.saturated && leftAPDS.filtered >= SIDE_PRESENT;
-  const bool rightWall = !rightAPDS.saturated && rightAPDS.filtered >= SIDE_PRESENT;
+  const bool leftWall = leftAPDS.filtered >= SIDE_PRESENT;
+  const bool rightWall = rightAPDS.filtered >= SIDE_PRESENT;
   if (leftWall) leftWallSeen = true;
 
   // Original straight-line P+D control for two walls, one wall, or open space.
@@ -207,13 +205,12 @@ void controlStep(uint32_t now) {
   sampleEncoder(leftEncoder);
   sampleEncoder(rightEncoder);
   const bool samplesOK = leftOK && rightOK && frontOK && gyroOK;
-  const bool saturated = leftAPDS.saturated || rightAPDS.saturated || frontAPDS.saturated;
 
   if (motion == Motion::Idle) {
     if (samplesOK && !startRequested) updateGesture();
     if (startRequested) {
       startRequested = false;
-      if (samplesOK && !saturated) beginRun();
+      if (samplesOK) beginRun();
       else Serial.println("START BLOCKED: check the APDS readings and IMU.");
     }
     return;
@@ -231,7 +228,7 @@ void controlStep(uint32_t now) {
     case Motion::Settle:
       if (now - phaseStarted >= TURN_SETTLE_MS) {
         previousError = 0;
-        leftWallSeen = !leftAPDS.saturated && leftAPDS.filtered >= SIDE_PRESENT;
+        leftWallSeen = leftAPDS.filtered >= SIDE_PRESENT;
         motion = Motion::Follow;
       }
       break;
@@ -240,11 +237,9 @@ void controlStep(uint32_t now) {
 }
 
 void printStatus() {
-  Serial.printf("%s APDS L=%u R=%u F=%u sat=%u/%u/%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
+  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
                 motionName(), unsigned(leftAPDS.raw), unsigned(rightAPDS.raw),
-                unsigned(frontAPDS.raw), unsigned(leftAPDS.saturated),
-                unsigned(rightAPDS.saturated), unsigned(frontAPDS.saturated),
-                yaw, long(leftEncoder.counts),
+                unsigned(frontAPDS.raw), yaw, long(leftEncoder.counts),
                 encoderUsable(leftEncoder) ? "OK" : "CHECK", long(rightEncoder.counts),
                 encoderUsable(rightEncoder) ? "OK" : "CHECK", leftPWM, rightPWM, lastStop);
 }
