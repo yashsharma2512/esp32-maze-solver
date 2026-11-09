@@ -173,17 +173,21 @@ void advanceAtCorner(uint32_t now) {
 }
 
 void updateTurn(uint32_t now) {
-  const float remaining = turnDegrees - fabsf(yaw - turnStartYaw);
-  if (remaining <= 3.0f) {
+  const float turned = fabsf(yaw - turnStartYaw);
+  const float remaining = turnDegrees - turned;
+  const bool reachedTarget = remaining <= 3.0f;
+  const uint32_t turnTimeout = turnDegrees > 90.0f ? 5000UL : 3000UL;
+  if (reachedTarget || now - phaseStarted >= turnTimeout) {
     stopMotors();
     phaseStarted = now;
     motion = Motion::Settle;
-  } else if (now - phaseStarted > (turnDegrees > 90.0f ? 5000UL : 3000UL)) {
-    stopRun("gyro turn timed out");
-  } else {
-    const int speed = constrain(int(2.0f * remaining), MIN_TURN_PWM, MAX_TURN_PWM);
-    moveMotor(turnDirection * speed, -turnDirection * speed);
+    if (!reachedTarget) {
+      Serial.printf("TURN TIMEOUT: %.1f of %.0f degrees. Rechecking walls.\n", turned, turnDegrees);
+    }
+    return;
   }
+  const int speed = constrain(int(2.0f * remaining), MIN_TURN_PWM, MAX_TURN_PWM);
+  moveMotor(turnDirection * speed, -turnDirection * speed);
 }
 
 void controlStep(uint32_t now) {

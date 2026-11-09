@@ -52,8 +52,11 @@ of 50. These are proximity counts. Validate them against actual wall surfaces
 and sensor angles. Check the corner offset and the 90° and 180° turns on the
 assembled robot before running a complete maze.
 
-Navigation stops on an APDS read failure or saturation, an IMU failure, or a
-motion timeout. Corner clearance also requires two usable encoder magnets.
+If a turn times out after 3 seconds for 90° or 5 seconds for 180°, the sketch
+logs the angle reached, ends the pivot, and rechecks the walls after a 150 ms
+settle. Wall following then resumes. Navigation stops on an APDS read failure
+or saturation, an IMU failure, or a corner clearance timeout. Corner clearance
+also requires two usable encoder magnets.
 The AS7341 prints while stopped so its library cannot delay motor control.
 Use the [standalone color calibration test](../../README.md#as7341-color-sensor-test)
 to capture black and white references and compare your floor materials. The main
