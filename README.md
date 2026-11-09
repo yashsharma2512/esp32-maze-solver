@@ -62,9 +62,9 @@ LED boost settings, adds eight IR pulses, and uses smoothing factor `alpha = 0.6
 Keep the motors off, upload the sketch, and move a hand toward and away from
 the sensor. Serial Monitor at 115200 baud prints `CH0 raw` (0–255) and
 `filtered` values every 100 ms. The raw reading should respond to the motion;
-filtered readings respond more gradually. The reported channel-0 hardware readings
-had valid conversions but only raw 0–5 near a target; check the IR LED supply and
-sensor orientation before using them for wall thresholds.
+filtered readings respond more gradually. Earlier low channel-0 readings were
+traced to the IR LED supply jumper; the jumper has now been soldered and the
+APDS readings are reported working.
 
 The original sketch combines two bytes starting at `PDATA` (`0x9C`), but
 proximity data is one byte. The test reads only that byte so the adjacent
