@@ -7,6 +7,7 @@
 constexpr int SDA_PIN = 21;
 constexpr int SCL_PIN = 22;
 constexpr uint8_t TCA_ADDRESS = 0x70;
+constexpr uint16_t LED_CURRENT_MA = 4;
 constexpr uint32_t SAMPLE_TIMEOUT_MS = 1000;
 
 Adafruit_AS7341 colorSensor;
@@ -60,6 +61,12 @@ void setup() {
       !colorSensor.setGain(AS7341_GAIN_16X)) {
     Serial.println("ERROR: Could not configure the AS7341 exposure.");
     return;
+  }
+
+  if (colorSensor.setLEDCurrent(LED_CURRENT_MA) && colorSensor.enableLED(true)) {
+    Serial.printf("AS7341 illumination LED enabled at %u mA.\n", unsigned(LED_CURRENT_MA));
+  } else {
+    Serial.println("WARNING: Could not enable the AS7341 illumination LED.");
   }
 
   sensorReady = true;

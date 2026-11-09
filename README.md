@@ -61,11 +61,12 @@ ground. Connect SDA to **GPIO21** and SCL to **GPIO22**, in parallel with the TC
 and IMU. Install **Adafruit AS7341** and **Adafruit BusIO** in Arduino Library
 Manager. Upload `AS7341_Color_Test.ino` and open Serial Monitor at 115200 baud.
 
-The sketch checks the sensor ID at `0x39`, then prints ten raw readings per
-line. Cover the sensor and uncover it to check the light response. For a color
-comparison, use different surfaces at the same distance under steady white light.
-The output shows the spectral bands, Clear, and Near IR. These readings can be
-used to develop color thresholds for the robot's lighting and mounting.
+The sketch checks the sensor ID at `0x39`, turns on the breakout's illumination
+LED at 4 mA, and prints ten raw readings per line. The LED stays on during
+sampling. For a color comparison, hold different surfaces at the same distance
+from the sensor under steady ambient light. The output shows the spectral bands,
+Clear, and Near IR. These readings can be used to develop color thresholds for
+the robot's lighting and mounting.
 
 **The AS7341 and APDS-9960 share `0x39`.** This test closes every TCA channel
 before initializing the main-bus AS7341. Before running an existing APDS-based
