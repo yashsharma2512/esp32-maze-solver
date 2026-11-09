@@ -35,6 +35,7 @@ before compiling. Upload and open Serial Monitor at **115200 baud**.
 
 The individual hardware tabs are linked in the [sensor and motor checks](DEBUGGING.md).
 `Robot.h` declares readings and run state shared by the tabs.
+`ColorCalibration.ino` handles color capture, matching, and EEPROM storage.
 
 ## MPU library setup
 
@@ -70,6 +71,29 @@ heading to zero. If the compiler says `MPU6050` has no member named
    a left opening, and a dead end individually before running a longer route.
    Use `FOLLOW`, `CORNER_ADVANCE`, and `TURN` in Serial Monitor to see the
    current decision.
+
+## Save and test floor colors
+
+1. Stop the robot. Open Serial Monitor at **115200 baud** and choose **Newline**.
+2. Send `c` and wait for `COLOR CALIBRATION: robot stopped.` The robot stays
+   stopped until you exit calibration.
+3. Place the red surface under the AS7341 at the distance it will be from
+   the floor. Send `save red` and hold it still until you see
+   `Saved red to EEPROM.` Repeat for each surface using its own name, for
+   example `save black`, `save white`, `save green`, or `save silver`.
+4. Send `list` to see the saved references. Swap in a test surface at the same
+   distance and send `read` to see the closest saved reference.
+5. Send `exit` to return to the normal start and stop controls. To check
+   persistence, reset the board, send `c` again, and send `list`.
+
+Each reference averages five readings of F1 through F8, Clear, and NIR.
+The ESP32 can hold 16 references. Names can have up to 15 lowercase letters,
+digits, underscores, or hyphens. Saving the same name replaces it. Use
+`delete red` to remove one reference or `help` to see all commands.
+
+`read` compares raw band counts, so keep the sensor height and lighting
+consistent. It always reports the closest saved sample when at least one
+reference exists. Calibrate with the actual tiles you plan to test.
 
 ## Navigation and tuning
 
@@ -113,9 +137,9 @@ with BOOT or `x` during a maneuver. Navigation stops on an APDS I²C failure,
 an IMU failure, or an encoder maneuver failure. Corner moves require two usable
 encoder magnets.
 The AS7341 prints while stopped so its library cannot delay motor control.
-Use the [standalone color calibration test](../../README.md#as7341-color-sensor-test)
-to capture black and white references and compare your floor materials. The main
-firmware reports raw readings while stopped.
+The [standalone color test](../../README.md#as7341-color-sensor-test) can check
+the sensor independently. Use the [main sketch's calibration mode](#save-and-test-floor-colors)
+to save references to EEPROM.
 
 If the run stops with `navigation sensor unavailable or late`, copy the next
 `NAV FAULT` line. It shows the motion phase and the read result and duration for

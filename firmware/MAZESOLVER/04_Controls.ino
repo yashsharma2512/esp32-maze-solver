@@ -20,17 +20,28 @@ void readControls() {
   static bool wasPressed = digitalRead(BOOT_BUTTON) == LOW;
   static uint32_t lastPress = 0;
   const bool pressed = digitalRead(BOOT_BUTTON) == LOW;
-  if (pressed && !wasPressed && millis() - lastPress >= 250) {
+  if (!colorCalibrationActive && pressed && !wasPressed && millis() - lastPress >= 250) {
     lastPress = millis();
     if (running) stopRun("BOOT button");
     else startRequested = true;
   }
   wasPressed = pressed;
 
+  if (colorCalibrationActive) {
+    readColorCommands();
+    return;
+  }
+
   while (Serial.available()) {
     const int key = Serial.read();
     if (key == 'x' || key == 'X') stopRun("serial command");
     if ((key == 's' || key == 'S') && !running) startRequested = true;
+    if ((key == 'c' || key == 'C') && !running) {
+      startRequested = false;
+      handStep = HandStep::Clear;
+      beginColorCalibration();
+      return;
+    }
   }
 }
 

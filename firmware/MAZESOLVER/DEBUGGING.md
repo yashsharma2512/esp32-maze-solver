@@ -63,6 +63,11 @@ void loop() {
 Check that the count rises as you move a hand closer. Change both instances
 of `leftAPDS` to `rightAPDS` or `frontAPDS` to check one other sensor.
 
+For the AS7341, use [the calibration commands](README.md#save-and-test-floor-colors)
+in the main sketch. After `save red` succeeds, reset the ESP32 and use
+`c` then `list` to confirm the reference was saved. If a command appears to
+do nothing, check that Serial Monitor is set to **Newline**.
+
 If the main sketch stops with a **`NAV FAULT`** line, copy that whole line.
 For example, `CH7=FAIL/20ms` means the front APDS read path failed after 20 ms.
 Check that sensor and its TCA channel. If the APDS and IMU entries all say

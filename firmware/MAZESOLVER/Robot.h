@@ -32,3 +32,4 @@ extern bool running;                // 04_Controls.ino
 extern const char *phase, *lastStop; // 04_Controls.ino
 extern bool hadLeftWall;            // 06_WallFollow.ino
 extern int previousWallError;       // 06_WallFollow.ino
+extern bool colorCalibrationActive; // ColorCalibration.ino

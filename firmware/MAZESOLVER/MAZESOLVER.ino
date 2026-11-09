@@ -6,11 +6,12 @@ void setup() {
   if (!startBoard()) return;  // Step 2
   setupSensors();             // Step 3
   Serial.println("STEP 4: Start with LEFT then RIGHT hand gestures, BOOT, or s. Stop with BOOT or x.");
+  Serial.println("Color calibration: send c while stopped.");
 }
 
 void loop() {
   readControls();
-  if (millis() - lastSample < SAMPLE_MS) {
+  if (colorCalibrationActive || millis() - lastSample < SAMPLE_MS) {
     delay(1);
     return;
   }

@@ -10,6 +10,7 @@ constexpr int MOTOR_STANDBY = 33;
 // I2C addresses are separate from the TCA's numbered channels.
 constexpr uint8_t TCA_ADDR = 0x70, APDS_ADDR = 0x39, AS5600_ADDR = 0x36;
 constexpr uint8_t COLOR_CH = 2;
+constexpr size_t COLOR_BAND_COUNT = 10;
 constexpr float APDS_ALPHA = 0.65f;
 
 // Navigation and timing.

@@ -3,6 +3,13 @@ Adafruit_AS7341 colorSensor;
 bool colorReady = false;
 uint32_t lastColorSample = 0;
 
+constexpr as7341_color_channel_t COLOR_BANDS[COLOR_BAND_COUNT] = {
+    AS7341_CHANNEL_415nm_F1, AS7341_CHANNEL_445nm_F2, AS7341_CHANNEL_480nm_F3,
+    AS7341_CHANNEL_515nm_F4, AS7341_CHANNEL_555nm_F5, AS7341_CHANNEL_590nm_F6,
+    AS7341_CHANNEL_630nm_F7, AS7341_CHANNEL_680nm_F8,
+    AS7341_CHANNEL_CLEAR, AS7341_CHANNEL_NIR,
+};
+
 bool initColor() {
   if (!selectChannel(COLOR_CH) || !colorSensor.begin(AS7341_I2CADDR_DEFAULT, &Wire)) {
     return false;
@@ -33,15 +40,17 @@ void setupColorSensor() {
                             : "AS7341 CH2 init failed. Check SD2/SC2.");
 }
 
+bool readColorSample(uint16_t *readings) {
+  if (!colorReady || !sampleColor()) return false;
+  for (size_t i = 0; i < COLOR_BAND_COUNT; ++i) {
+    readings[i] = colorSensor.getChannel(COLOR_BANDS[i]);
+  }
+  return true;
+}
+
 void printColorSample() {
-  const as7341_color_channel_t bands[] = {
-      AS7341_CHANNEL_415nm_F1, AS7341_CHANNEL_445nm_F2, AS7341_CHANNEL_480nm_F3,
-      AS7341_CHANNEL_515nm_F4, AS7341_CHANNEL_555nm_F5, AS7341_CHANNEL_590nm_F6,
-      AS7341_CHANNEL_630nm_F7, AS7341_CHANNEL_680nm_F8,
-      AS7341_CHANNEL_CLEAR, AS7341_CHANNEL_NIR,
-  };
   Serial.print("AS7341 F1..F8,Clear,NIR:");
-  for (auto band : bands) Serial.printf(" %u", unsigned(colorSensor.getChannel(band)));
+  for (auto band : COLOR_BANDS) Serial.printf(" %u", unsigned(colorSensor.getChannel(band)));
   Serial.println();
 }
 
