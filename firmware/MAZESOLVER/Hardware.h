@@ -159,10 +159,16 @@ bool encoderUsable(const Encoder &encoder) {
 }
 
 // HARDWARE 6 - Gyro. Measure rotation and add it up to get the heading.
+// The original mpu.begin(3, 0) selects the +/-2000 degrees/second range.
+constexpr uint8_t GYRO_RANGE_SETTING = 0x18;
+constexpr float GYRO_COUNTS_PER_DPS = 16.4f;
+constexpr int GYRO_CALIBRATION_SAMPLES = 500;
+
 bool readGyroZ(float &rate) {
   uint8_t data[2];
   if (!readReg(imuAddress, 0x47, data, sizeof(data))) return false;
-  rate = int16_t((uint16_t(data[0]) << 8) | data[1]) / 131.0f;
+  const int16_t rawRate = int16_t((uint16_t(data[0]) << 8) | data[1]);
+  rate = rawRate / GYRO_COUNTS_PER_DPS;
   return true;
 }
 
@@ -173,21 +179,30 @@ bool initIMU() {
     imuAddress = address;
     if (!writeReg(address, 0x6B, 0x01)) return false;
     delay(100);
-    if (!writeReg(address, 0x6C, 0x00) || !writeReg(address, 0x1B, 0x00) ||
-        !writeReg(address, 0x1A, 0x03)) return false;
-    Serial.printf("IMU 0x%02X ID=0x%02X. Keep the robot still for gyro calibration.\n",
+    // Match the original sample divider, filter setting, and gyro range.
+    if (!writeReg(address, 0x6C, 0x00) || !writeReg(address, 0x19, 0x00) ||
+        !writeReg(address, 0x1A, 0x00) || !writeReg(address, 0x1B, GYRO_RANGE_SETTING)) {
+      return false;
+    }
+    uint8_t gyroConfig = 0;
+    if (!readReg(address, 0x1B, &gyroConfig, 1) || (gyroConfig & 0x18) != GYRO_RANGE_SETTING) {
+      Serial.println("IMU ERROR: gyro range setting did not read back.");
+      return false;
+    }
+    Serial.printf("IMU 0x%02X ID=0x%02X. Gyro range +/-2000 deg/s. Keep still.\n",
                   unsigned(address), unsigned(id));
-    float minimum = 250, maximum = -250, total = 0;
-    for (int i = 0; i < 120; ++i) {
+    // Average stationary Z readings to measure the gyro's zero offset.
+    float minimum = 2000, maximum = -2000, total = 0;
+    for (int i = 0; i < GYRO_CALIBRATION_SAMPLES; ++i) {
       float rate;
       if (!readGyroZ(rate)) return false;
       minimum = min(minimum, rate);
       maximum = max(maximum, rate);
       total += rate;
-      delay(5);
+      delay(1);
     }
     if (maximum - minimum > 5.0f) return false;
-    gyroBias = total / 120.0f;
+    gyroBias = total / GYRO_CALIBRATION_SAMPLES;
     lastGyroSample = micros();
     return true;
   }

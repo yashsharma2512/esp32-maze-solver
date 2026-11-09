@@ -28,6 +28,8 @@ next step. Keep the robot still while it calibrates the gyro.
 ## Step 3 — Test the sensors
 
 Look for three APDS `READY` messages, `Gyro calibrated.`, and `AS7341 CH2 ready`.
+The main sketch prints `Gyro range +/-2000 deg/s` before taking the 500
+stationary readings. Keep the robot still until `Gyro calibrated.` appears.
 If one part is unclear, upload its test sketch by itself. Re-upload the main
 sketch after the sensor passes.
 

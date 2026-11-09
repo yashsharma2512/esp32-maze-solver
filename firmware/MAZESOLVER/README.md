@@ -53,6 +53,11 @@ APDS smoothing, proportional/derivative steering, gyro heading correction,
 and base PWM of 100. `GYRO_Z_SIGN` assumes the IMU Z axis points up. Use `-1`
 if the board is mounted with Z pointing down.
 
+The Z gyro uses the original `mpu.begin(3, 0)` range of ±2,000°/s and
+averages 500 readings at startup to measure its zero offset. The ESP32
+reads the Z rate directly from the MPU6500 or MPU6050 and uses it for
+heading correction and turns.
+
 At a left opening the robot advances up to 220 mm, turns 90° left, then
 backs up 30 mm. If the front is blocked, it pauses for 200 ms and chooses
 the turn from fresh side readings. At a dead end it turns left twice and
