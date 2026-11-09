@@ -28,8 +28,11 @@ next step. Keep the robot still while it calibrates the gyro.
 ## Step 3 — Test the sensors
 
 Look for three APDS `READY` messages, `Gyro calibrated.`, and `AS7341 CH2 ready`.
-The main sketch prints `Gyro range +/-2000 deg/s` before taking the 500
-stationary readings. Keep the robot still until `Gyro calibrated.` appears.
+The main sketch identifies the IMU by model and address. A typical MPU6050
+prints `IMU MPU6050 at 0x68, ID=0x68.` It verifies the gyro and accelerometer
+ranges before taking 500 stationary Z readings. Keep the robot still until
+`Gyro calibrated.` appears. If startup fails, look for the specific
+`IMU ERROR` line above it.
 If one part is unclear, upload its test sketch by itself. Re-upload the main
 sketch after the sensor passes.
 

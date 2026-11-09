@@ -67,8 +67,8 @@ void setup() {
     Serial.printf("APDS %s CH%u: %s\n", sensor->name, unsigned(sensor->channel),
                   ok ? "READY" : "INIT ERROR");
   }
-  gyroReady = selectMux(0) && initIMU();
-  Serial.println(gyroReady ? "Gyro calibrated." : "IMU init/calibration failed. Keep still and reset.");
+  gyroReady = initIMU();
+  Serial.println(gyroReady ? "Gyro calibrated." : "IMU startup failed. See the IMU error above.");
   colorReady = initColor();
   Serial.println(colorReady ? "AS7341 CH2 ready. Color samples print while stopped."
                             : "AS7341 CH2 init failed. Check SD2/SC2.");

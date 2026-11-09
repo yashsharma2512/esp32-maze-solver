@@ -161,6 +161,7 @@ bool encoderUsable(const Encoder &encoder) {
 // HARDWARE 6 - Gyro. Measure rotation and add it up to get the heading.
 // The original mpu.begin(3, 0) selects the +/-2000 degrees/second range.
 constexpr uint8_t GYRO_RANGE_SETTING = 0x18;
+constexpr uint8_t ACCEL_RANGE_SETTING = 0x00;  // Original +/-2 g range.
 constexpr float GYRO_COUNTS_PER_DPS = 16.4f;
 constexpr int GYRO_CALIBRATION_SAMPLES = 500;
 
@@ -173,15 +174,32 @@ bool readGyroZ(float &rate) {
 }
 
 bool initIMU() {
+  // 1. Find the IMU on the main bus and read its model ID.
+  if (!selectMux(0)) {
+    Serial.println("IMU ERROR: could not close the TCA channels before checking the main bus.");
+    return false;
+  }
   for (uint8_t address : {uint8_t(0x68), uint8_t(0x69)}) {
     uint8_t id = 0;
-    if (!readReg(address, 0x75, &id, 1) || (id != 0x70 && id != 0x68)) continue;
+    if (!readReg(address, 0x75, &id, 1)) continue;
+    if (id != 0x68 && id != 0x70) {
+      Serial.printf("IMU at 0x%02X returned unsupported ID 0x%02X.\n", unsigned(address), unsigned(id));
+      continue;
+    }
     imuAddress = address;
-    if (!writeReg(address, 0x6B, 0x01)) return false;
+    Serial.printf("IMU %s at 0x%02X, ID=0x%02X.\n",
+                  id == 0x68 ? "MPU6050" : "MPU6500", unsigned(address), unsigned(id));
+
+    // 2. Wake the chip, apply the original settings, and verify both ranges.
+    if (!writeReg(address, 0x6B, 0x01)) {
+      Serial.println("IMU ERROR: wake command failed.");
+      return false;
+    }
     delay(100);
-    // Match the original sample divider, filter setting, and gyro range.
     if (!writeReg(address, 0x6C, 0x00) || !writeReg(address, 0x19, 0x00) ||
-        !writeReg(address, 0x1A, 0x00) || !writeReg(address, 0x1B, GYRO_RANGE_SETTING)) {
+        !writeReg(address, 0x1A, 0x00) || !writeReg(address, 0x1B, GYRO_RANGE_SETTING) ||
+        !writeReg(address, 0x1C, ACCEL_RANGE_SETTING)) {
+      Serial.println("IMU ERROR: configuration write failed.");
       return false;
     }
     uint8_t gyroConfig = 0;
@@ -189,23 +207,35 @@ bool initIMU() {
       Serial.println("IMU ERROR: gyro range setting did not read back.");
       return false;
     }
-    Serial.printf("IMU 0x%02X ID=0x%02X. Gyro range +/-2000 deg/s. Keep still.\n",
-                  unsigned(address), unsigned(id));
-    // Average stationary Z readings to measure the gyro's zero offset.
+    uint8_t accelConfig = 0;
+    if (!readReg(address, 0x1C, &accelConfig, 1) || (accelConfig & 0x18) != ACCEL_RANGE_SETTING) {
+      Serial.println("IMU ERROR: accelerometer range setting did not read back.");
+      return false;
+    }
+    Serial.println("Gyro range +/-2000 deg/s. Accelerometer range +/-2 g. Keep still.");
+
+    // 3. Average stationary Z readings to measure the gyro's zero offset.
     float minimum = 2000, maximum = -2000, total = 0;
     for (int i = 0; i < GYRO_CALIBRATION_SAMPLES; ++i) {
       float rate;
-      if (!readGyroZ(rate)) return false;
+      if (!readGyroZ(rate)) {
+        Serial.println("IMU ERROR: gyro read failed during calibration.");
+        return false;
+      }
       minimum = min(minimum, rate);
       maximum = max(maximum, rate);
       total += rate;
       delay(1);
     }
-    if (maximum - minimum > 5.0f) return false;
+    if (maximum - minimum > 5.0f) {
+      Serial.println("IMU ERROR: gyro changed during calibration. Hold still and reset.");
+      return false;
+    }
     gyroBias = total / GYRO_CALIBRATION_SAMPLES;
     lastGyroSample = micros();
     return true;
   }
+  Serial.println("IMU ERROR: no MPU6050 or MPU6500 found at 0x68 or 0x69. Check the main I2C wiring.");
   return false;
 }
 
