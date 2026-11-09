@@ -3,9 +3,13 @@
 #include <Wire.h>
 #include <Adafruit_AS7341.h>
 
+// ESP32 header pins. The three motor pins are IN1, IN2, and PWM.
 constexpr int SDA_PIN = 21, SCL_PIN = 22;
-constexpr int LMF = 25, LMR = 26, PWML = 27;
-constexpr int RMF = 18, RMR = 19, PWMR = 23, STBY = 33;
+constexpr int LEFT_FORWARD = 25, LEFT_REVERSE = 26, LEFT_SPEED = 27;
+constexpr int RIGHT_FORWARD = 18, RIGHT_REVERSE = 19, RIGHT_SPEED = 23;
+constexpr int MOTOR_STANDBY = 33;
+
+// I2C addresses are separate from the TCA's numbered channels.
 constexpr uint8_t TCA_ADDR = 0x70, APDS_ADDR = 0x39, AS5600_ADDR = 0x36;
 constexpr uint8_t COLOR_CH = 2;
 constexpr float APDS_ALPHA = 0.65f;
@@ -64,33 +68,38 @@ bool writeReg(uint8_t address, uint8_t reg, uint8_t value) {
 }
 
 void stopMotors() {
-  digitalWrite(STBY, LOW);
-  analogWrite(PWML, 0);
-  analogWrite(PWMR, 0);
-  for (int pin : {LMF, LMR, RMF, RMR}) digitalWrite(pin, LOW);
+  digitalWrite(MOTOR_STANDBY, LOW);
+  analogWrite(LEFT_SPEED, 0);
+  analogWrite(RIGHT_SPEED, 0);
+  for (int pin : {LEFT_FORWARD, LEFT_REVERSE, RIGHT_FORWARD, RIGHT_REVERSE}) {
+    digitalWrite(pin, LOW);
+  }
   leftPWM = rightPWM = 0;
 }
 
-void setMotorIOs() {
-  pinMode(STBY, OUTPUT);
-  digitalWrite(STBY, LOW);
-  for (int pin : {LMF, LMR, PWML, RMF, RMR, PWMR}) pinMode(pin, OUTPUT);
+void setupMotorPins() {
+  pinMode(MOTOR_STANDBY, OUTPUT);
+  digitalWrite(MOTOR_STANDBY, LOW);
+  for (int pin : {LEFT_FORWARD, LEFT_REVERSE, LEFT_SPEED,
+                  RIGHT_FORWARD, RIGHT_REVERSE, RIGHT_SPEED}) {
+    pinMode(pin, OUTPUT);
+  }
   stopMotors();
 }
 
-// Same signed PWM convention and left trim as the original maze sketch.
+// Positive speed drives forward. Negative speed drives backward.
 void moveMotor(int left, int right) {
   leftPWM = int(constrain(left, -255, 255) * 0.985f);
   rightPWM = constrain(right, -255, 255);
-  analogWrite(PWML, 0);
-  analogWrite(PWMR, 0);
-  digitalWrite(LMF, leftPWM > 0 ? HIGH : LOW);
-  digitalWrite(LMR, leftPWM < 0 ? HIGH : LOW);
-  digitalWrite(RMF, rightPWM > 0 ? HIGH : LOW);
-  digitalWrite(RMR, rightPWM < 0 ? HIGH : LOW);
-  analogWrite(PWML, abs(leftPWM));
-  analogWrite(PWMR, abs(rightPWM));
-  digitalWrite(STBY, HIGH);
+  analogWrite(LEFT_SPEED, 0);
+  analogWrite(RIGHT_SPEED, 0);
+  digitalWrite(LEFT_FORWARD, leftPWM > 0 ? HIGH : LOW);
+  digitalWrite(LEFT_REVERSE, leftPWM < 0 ? HIGH : LOW);
+  digitalWrite(RIGHT_FORWARD, rightPWM > 0 ? HIGH : LOW);
+  digitalWrite(RIGHT_REVERSE, rightPWM < 0 ? HIGH : LOW);
+  analogWrite(LEFT_SPEED, abs(leftPWM));
+  analogWrite(RIGHT_SPEED, abs(rightPWM));
+  digitalWrite(MOTOR_STANDBY, HIGH);
 }
 
 bool initAPDS(const Proximity &sensor) {
@@ -108,6 +117,7 @@ bool initAPDS(const Proximity &sensor) {
 }
 
 bool sampleAPDS(Proximity &sensor) {
+  // PDATA is the sensor's one-byte proximity reading (0 to 255).
   if (!selectChannel(sensor.channel) || !readReg(APDS_ADDR, 0x9C, &sensor.raw, 1)) {
     sensor.filterReady = false;
     return false;
@@ -130,6 +140,7 @@ bool sampleEncoder(Encoder &encoder) {
   int16_t angle = ((data[1] & 0x0F) << 8) | data[2];
   if (encoder.previous >= 0) {
     int delta = angle - encoder.previous;
+    // Follow the wheel across the 4095-to-0 boundary.
     if (delta > 2048) delta -= 4096;
     if (delta < -2048) delta += 4096;
     encoder.counts += delta;
@@ -139,6 +150,7 @@ bool sampleEncoder(Encoder &encoder) {
 }
 
 bool encoderUsable(const Encoder &encoder) {
+  // Require a successful read and a detected magnet within range.
   return encoder.readOK && (encoder.status & 0x38) == 0x20;
 }
 

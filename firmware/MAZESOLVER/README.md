@@ -38,6 +38,13 @@ AS7341** and **Adafruit BusIO** if needed. Upload and open Serial Monitor at
 
 ## Navigation and tuning
 
+Start at `loop()` in `MAZESOLVER.ino`. It reads the sensors, then calls
+`followLeftWall()` when the robot is running. That function reads in movement
+order. At a left opening it calls `moveCornerDistance()`, `turn90()`, and
+`moveCornerDistance()` again for the backup. Each movement calls
+`updateDuringMove()` to check the sensors and stop controls. Adjust the tuning
+values at the top of the sketch. `Hardware.h` holds the wiring and device reads.
+
 The firmware follows the left-hand rule continuously. It uses the original
 APDS smoothing, proportional/derivative steering, gyro heading correction,
 and base PWM of 100. `GYRO_Z_SIGN` assumes the IMU Z axis points up. Use `-1`

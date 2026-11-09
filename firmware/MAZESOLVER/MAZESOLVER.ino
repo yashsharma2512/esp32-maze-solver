@@ -1,263 +1,112 @@
-// Continuous left-hand maze run for the ESP32-WROOM-32 robot.
+// ESP32 maze robot. Start reading at loop(), then look at followLeftWall().
+// Hardware.h contains the pins and sensor drivers.
 #include "Hardware.h"
 
-constexpr int START_BUTTON_PIN = 0;
-constexpr uint32_t CONTROL_MS = 10, MAX_CONTROL_GAP_MS = 120;
-constexpr uint32_t PRINT_MS = 250;
-constexpr uint8_t GESTURE_HIGH = 150, GESTURE_RELEASE = 100;
-constexpr uint8_t SIDE_OPEN = 9, SIDE_PRESENT = 25, FRONT_BLOCKED = 40;
-constexpr int WALL_TARGET = 50, MAX_WALL_ERROR = 75;
-constexpr float KP = 0.85f, KD = 1.5f, GYRO_ASSIST = 1.5f;
-constexpr int GYRO_Z_SIGN = 1; // Use -1 if the IMU is mounted upside down.
-constexpr int BASE_PWM = 100, MAX_STEERING = 120;
-constexpr float TURN_KP = 12.5f, TURN_KD = 0.2f;
-constexpr int MIN_TURN_PWM = 55, MAX_TURN_PWM = 165;
-constexpr uint32_t TURN_TIMEOUT_MS = 1100, TURN_TARGET_HOLD_MS = 200;
+// Wall-follow settings from the original robot.
+constexpr int BASE_PWM = 100;
+constexpr int FRONT_WALL = 40, SIDE_OPEN = 9, SIDE_WALL = 25;
+constexpr int SIDE_TARGET = 50;
+constexpr float WALL_KP = 0.85f, WALL_KD = 1.5f;
+constexpr float GYRO_ASSIST = 1.5f;
+constexpr int GYRO_Z_SIGN = 1;  // Set to -1 if the IMU's Z axis points down.
+
+// Corner and turn settings from the original robot.
 constexpr float WHEEL_DIAMETER_MM = 70.0f;
-constexpr float CORNER_ADVANCE_MM = 220.0f, TURN_REVERSE_MM = 30.0f;
-constexpr uint32_t DISTANCE_TIMEOUT_MS = 4500, DEAD_END_REVERSE_MS = 1000;
+constexpr float CORNER_ADVANCE_MM = 220.0f, CORNER_BACKUP_MM = 30.0f;
+constexpr bool TURN_LEFT = true, TURN_RIGHT = false;
+constexpr float TURN_KP = 12.5f, TURN_KD = 0.2f;
+constexpr uint32_t TURN_TIMEOUT_MS = 1100, TURN_HOLD_MS = 200;
+constexpr uint32_t DISTANCE_TIMEOUT_MS = 4500;
 
-enum class Motion { Idle, Follow, DistanceMove, Turn, Pause, DeadEndReverse };
-enum class Step { Follow, ChooseFrontTurn, LeftAtOpening, BackUp, SecondLeft, DeadEndReverse };
-enum class Gesture { WaitClear, LeftHand, RightHand, Release };
-Motion motion = Motion::Idle;
-Step afterPause = Step::Follow, afterTurn = Step::BackUp;
-Gesture gesture = Gesture::WaitClear;
-bool busReady = false, apdsReady = false, imuReady = false;
-bool startRequested = false, leftWallSeen = false;
+constexpr int BOOT_BUTTON = 0;
+constexpr uint32_t SAMPLE_MS = 10, SENSOR_LIMIT_MS = 120;
+constexpr int HAND_NEAR = 150, HAND_AWAY = 100;
+
+enum class HandStep { Clear, Left, Right, Release };
+HandStep handStep = HandStep::Clear;
+bool running = false, startRequested = false;
+bool busReady = false, apdsReady = false, gyroReady = false;
+bool hadLeftWall = false;
+int previousWallError = 0;
+float straightHeading = 0;
+const char *phase = "IDLE";
 const char *lastStop = "none";
-uint32_t lastControl = 0, lastPrint = 0, phaseStarted = 0, pauseLength = 0;
-int32_t distanceLeftStart = 0, distanceRightStart = 0;
-float distanceTarget = 0, headingYaw = 0, turnStartYaw = 0;
-int previousError = 0, previousTurnError = 0;
-bool turnReachedTarget = false;
-uint32_t turnTargetAt = 0;
-int turnDirection = -1; // Left = -1, right = 1.
+uint32_t lastSample = 0;
 
-const char *motionName() {
-  switch (motion) {
-    case Motion::Idle: return "IDLE";
-    case Motion::Follow: return "FOLLOW";
-    case Motion::DistanceMove: return distanceTarget > 0 ? "CORNER_ADVANCE" : "CORNER_REVERSE";
-    case Motion::Turn: return "TURN";
-    case Motion::Pause: return "PAUSE";
-    case Motion::DeadEndReverse: return "DEAD_END_REVERSE";
-  }
-  return "UNKNOWN";
-}
-
+// Start or stop from USB Serial or the onboard BOOT button.
 void stopRun(const char *reason) {
   stopMotors();
-  motion = Motion::Idle;
-  gesture = Gesture::WaitClear;
+  running = false;
   startRequested = false;
+  handStep = HandStep::Clear;
+  phase = "IDLE";
   lastStop = reason;
   Serial.printf("STOP: %s\n", reason);
 }
 
-void serviceControls() {
-  static bool previousBoot = digitalRead(START_BUTTON_PIN) == LOW;
-  static uint32_t lastBootAction = 0;
-  const bool pressed = digitalRead(START_BUTTON_PIN) == LOW;
-  if (pressed && !previousBoot && millis() - lastBootAction >= 250) {
-    lastBootAction = millis();
-    if (motion == Motion::Idle) startRequested = true;
-    else stopRun("BOOT button");
+void readControls() {
+  static bool wasPressed = digitalRead(BOOT_BUTTON) == LOW;
+  static uint32_t lastPress = 0;
+  const bool pressed = digitalRead(BOOT_BUTTON) == LOW;
+  if (pressed && !wasPressed && millis() - lastPress >= 250) {
+    lastPress = millis();
+    if (running) stopRun("BOOT button");
+    else startRequested = true;
   }
-  previousBoot = pressed;
+  wasPressed = pressed;
 
   while (Serial.available()) {
-    const int command = Serial.read();
-    if (command == 'x' || command == 'X') stopRun("serial command");
-    if ((command == 's' || command == 'S') && motion == Motion::Idle) {
-      startRequested = true;
-    }
+    const int key = Serial.read();
+    if (key == 'x' || key == 'X') stopRun("serial command");
+    if ((key == 's' || key == 'S') && !running) startRequested = true;
   }
 }
 
-void updateGesture() {
-  switch (gesture) {
-    case Gesture::WaitClear:
-      if (leftAPDS.raw < GESTURE_RELEASE && rightAPDS.raw < GESTURE_RELEASE) {
-        gesture = Gesture::LeftHand;
+void checkHandStart() {
+  const bool leftClear = leftAPDS.raw < HAND_AWAY;
+  const bool rightClear = rightAPDS.raw < HAND_AWAY;
+  switch (handStep) {
+    case HandStep::Clear:
+      if (leftClear && rightClear) {
+        handStep = HandStep::Left;
         Serial.println("Show a hand to the LEFT APDS (CH0), then move it away.");
       }
       break;
-    case Gesture::LeftHand:
-      if (leftAPDS.raw > GESTURE_HIGH) {
-        gesture = Gesture::RightHand;
+    case HandStep::Left:
+      if (leftAPDS.raw > HAND_NEAR) {
+        handStep = HandStep::Right;
         Serial.println("Show a hand to the RIGHT APDS (CH1), then move it away.");
       }
       break;
-    case Gesture::RightHand:
-      if (leftAPDS.raw < GESTURE_RELEASE && rightAPDS.raw > GESTURE_HIGH) {
-        gesture = Gesture::Release;
-      }
+    case HandStep::Right:
+      if (leftClear && rightAPDS.raw > HAND_NEAR) handStep = HandStep::Release;
       break;
-    case Gesture::Release:
-      if (leftAPDS.raw < GESTURE_RELEASE && rightAPDS.raw < GESTURE_RELEASE) {
+    case HandStep::Release:
+      if (leftClear && rightClear) {
         startRequested = true;
-        gesture = Gesture::WaitClear;
+        handStep = HandStep::Clear;
       }
       break;
   }
 }
 
-void beginRun() {
-  leftWallSeen = leftAPDS.filtered > SIDE_OPEN;
-  previousError = 0;
-  headingYaw = yaw;
-  lastStop = "none";
-  motion = Motion::Follow;
-  Serial.println("START: continuous left-wall following. Send x or press BOOT to stop.");
+void printStatus() {
+  static uint32_t lastPrint = 0;
+  if (millis() - lastPrint < 250) return;
+  lastPrint = millis();
+  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
+                phase, unsigned(leftAPDS.raw), unsigned(rightAPDS.raw), unsigned(frontAPDS.raw),
+                yaw, long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
+                long(rightEncoder.counts), encoderUsable(rightEncoder) ? "OK" : "CHECK",
+                leftPWM, rightPWM, lastStop);
 }
 
-void beginPause(Step next, uint32_t duration, uint32_t now) {
-  stopMotors();
-  afterPause = next;
-  pauseLength = duration;
-  phaseStarted = now;
-  motion = Motion::Pause;
-}
-
-void beginTurn(int direction, Step next, uint32_t now) {
-  stopMotors();
-  turnDirection = direction;
-  afterTurn = next;
-  turnStartYaw = yaw;
-  previousTurnError = 0;
-  turnReachedTarget = false;
-  phaseStarted = now;
-  motion = Motion::Turn;
-  Serial.printf("TURN: %s 90 degrees\n", direction < 0 ? "LEFT" : "RIGHT");
-}
-
-void beginDistanceMove(float targetMM, uint32_t now) {
-  if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
-    stopRun("corner maneuver needs both encoders");
-    return;
-  }
-  distanceLeftStart = leftEncoder.counts;
-  distanceRightStart = rightEncoder.counts;
-  distanceTarget = targetMM;
-  phaseStarted = now;
-  motion = Motion::DistanceMove;
-  Serial.printf("%s %.0f mm\n", targetMM > 0 ? "CORNER_ADVANCE" : "CORNER_REVERSE", fabsf(targetMM));
-}
-
-bool frontBlocked() {
-  return frontAPDS.raw > FRONT_BLOCKED;
-}
-
-int gyroCorrection() {
-  return int(GYRO_Z_SIGN * (yaw - headingYaw) * GYRO_ASSIST);
-}
-
-void followWalls(uint32_t now) {
-  const bool leftPresentForTurn = leftAPDS.filtered > SIDE_OPEN;
-  const bool leftOpening = leftWallSeen && !leftPresentForTurn;
-  leftWallSeen = leftPresentForTurn;
-  if (leftOpening) {
-    beginDistanceMove(CORNER_ADVANCE_MM, now);
-    return;
-  }
-  if (frontBlocked()) {
-    beginPause(Step::ChooseFrontTurn, 200, now);
-    return;
-  }
-
-  const int leftValue = int(leftAPDS.filtered), rightValue = int(rightAPDS.filtered);
-  const bool leftWall = leftValue > SIDE_PRESENT, rightWall = rightValue > SIDE_PRESENT;
-  int error = 0;
-  if (leftWall && rightWall) error = leftValue - rightValue;
-  else if (leftWall) error = leftValue - WALL_TARGET;
-  else if (rightWall) error = WALL_TARGET - rightValue;
-  error = constrain(error, -MAX_WALL_ERROR, MAX_WALL_ERROR);
-  const int steering = constrain(int(KP * error) + int(KD * (error - previousError)),
-                                 -MAX_STEERING, MAX_STEERING);
-  previousError = error;
-  const int gyro = gyroCorrection();
-  moveMotor(BASE_PWM + steering + gyro, BASE_PWM - steering - gyro);
-}
-
-void updateDistanceMove(uint32_t now) {
-  if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
-    stopRun("encoder read or magnet fault during corner maneuver");
-    return;
-  }
-  const float left = fabsf(float(leftEncoder.counts - distanceLeftStart));
-  const float right = fabsf(float(rightEncoder.counts - distanceRightStart));
-  const float traveledMM = (left + right) * 0.5f * PI * WHEEL_DIAMETER_MM / 4096.0f;
-  const float remainingMM = fabsf(distanceTarget) - traveledMM;
-  if (frontBlocked() || remainingMM <= 0) {
-    beginPause(distanceTarget > 0 ? Step::LeftAtOpening : Step::Follow, 100, now);
-  } else if (now - phaseStarted >= DISTANCE_TIMEOUT_MS) {
-    stopRun("corner maneuver timed out");
-  } else {
-    const float remainingDegrees = remainingMM * 360.0f / (PI * WHEEL_DIAMETER_MM);
-    const int speed = constrain(int(1.9f * remainingDegrees), 60, 125);
-    const int drive = distanceTarget > 0 ? speed : -speed;
-    const int gyro = gyroCorrection();
-    moveMotor(drive + gyro, drive - gyro);
-  }
-}
-
-void updateTurn(uint32_t now) {
-  const float turned = fabsf(yaw - turnStartYaw);
-  const int error = int(90.0f - turned);
-  if (!turnReachedTarget && error <= 0) {
-    turnReachedTarget = true;
-    turnTargetAt = now;
-  }
-  if (now - phaseStarted >= TURN_TIMEOUT_MS ||
-      (turnReachedTarget && now - turnTargetAt >= TURN_TARGET_HOLD_MS)) {
-    headingYaw = yaw;
-    if (!turnReachedTarget) {
-      Serial.printf("TURN TIMEOUT: %.1f of 90 degrees. Rechecking walls.\n", turned);
-    }
-    beginPause(turnReachedTarget ? afterTurn : Step::Follow, 100, now);
-    return;
-  }
-  int speed = constrain(int(TURN_KP * error + TURN_KD * (error - previousTurnError)),
-                        -MAX_TURN_PWM, MAX_TURN_PWM);
-  previousTurnError = error;
-  if (speed > 0 && speed < MIN_TURN_PWM) speed = MIN_TURN_PWM;
-  if (speed < 0 && speed > -MIN_TURN_PWM) speed = -MIN_TURN_PWM;
-  moveMotor(turnDirection * speed, -turnDirection * speed);
-}
-
-void updatePause(uint32_t now) {
-  if (now - phaseStarted < pauseLength) return;
-  switch (afterPause) {
-    case Step::Follow:
-      previousError = 0;
-      leftWallSeen = leftAPDS.filtered > SIDE_OPEN;
-      motion = Motion::Follow;
-      break;
-    case Step::ChooseFrontTurn: {
-      const bool leftWall = leftAPDS.filtered > SIDE_OPEN;
-      const bool rightWall = rightAPDS.filtered > SIDE_OPEN;
-      if (leftWall && rightWall) beginTurn(-1, Step::SecondLeft, now);
-      else beginTurn(leftWall ? 1 : -1, Step::BackUp, now);
-      break;
-    }
-    case Step::LeftAtOpening: beginTurn(-1, Step::BackUp, now); break;
-    case Step::BackUp: beginDistanceMove(-TURN_REVERSE_MM, now); break;
-    case Step::SecondLeft: beginTurn(-1, Step::DeadEndReverse, now); break;
-    case Step::DeadEndReverse:
-      phaseStarted = now;
-      motion = Motion::DeadEndReverse;
-      moveMotor(-BASE_PWM, -BASE_PWM);
-      break;
-  }
-}
-
-void controlStep(uint32_t now) {
-  if (motion != Motion::Idle && now - lastControl > MAX_CONTROL_GAP_MS) {
-    stopRun("navigation loop ran late");
-  }
-  lastControl = now;
-  if (!busReady) return;
+// Read one set of sensors. Timestamp each read so an intermittent fault is traceable.
+bool readSensors() {
+  const uint32_t start = millis();
+  if (running && start - lastSample > SENSOR_LIMIT_MS) stopRun("navigation loop ran late");
+  lastSample = start;
+  if (!busReady) return false;
 
   const bool leftOK = apdsReady && sampleAPDS(leftAPDS);
   const uint32_t leftDone = millis();
@@ -265,81 +114,211 @@ void controlStep(uint32_t now) {
   const uint32_t rightDone = millis();
   const bool frontOK = apdsReady && sampleAPDS(frontAPDS);
   const uint32_t frontDone = millis();
-  const bool gyroOK = imuReady && sampleIMU();
+  const bool gyroOK = gyroReady && sampleIMU();
   const uint32_t gyroDone = millis();
   const bool leftEncoderOK = sampleEncoder(leftEncoder);
   const uint32_t leftEncoderDone = millis();
   const bool rightEncoderOK = sampleEncoder(rightEncoder);
-  const uint32_t decisionTime = millis();
-  const uint32_t sampleTime = decisionTime - now;
-  const bool samplesOK = leftOK && rightOK && frontOK && gyroOK;
+  const uint32_t end = millis();
 
-  if (motion == Motion::Idle) {
-    if (samplesOK && !startRequested) updateGesture();
-    if (startRequested) {
-      startRequested = false;
-      if (samplesOK) beginRun();
-      else Serial.println("START BLOCKED: check the APDS readings and IMU.");
-    }
-    return;
-  }
-
-  if (!samplesOK || sampleTime > MAX_CONTROL_GAP_MS) {
-    const char *phase = motionName();
+  const bool sensorsOK = leftOK && rightOK && frontOK && gyroOK;
+  if (running && (!sensorsOK || end - start > SENSOR_LIMIT_MS)) {
+    const char *faultPhase = phase;
     stopRun("navigation sensor unavailable or late");
     Serial.printf("NAV FAULT phase=%s cycle=%ums limit=%ums | CH0=%s/%ums CH1=%s/%ums CH7=%s/%ums "
                   "IMU=%s/%ums ENC5=%s/%ums ENC4=%s/%ums\n",
-                  phase, unsigned(sampleTime), unsigned(MAX_CONTROL_GAP_MS),
-                  leftOK ? "OK" : "FAIL", unsigned(leftDone - now),
+                  faultPhase, unsigned(end - start), unsigned(SENSOR_LIMIT_MS),
+                  leftOK ? "OK" : "FAIL", unsigned(leftDone - start),
                   rightOK ? "OK" : "FAIL", unsigned(rightDone - leftDone),
                   frontOK ? "OK" : "FAIL", unsigned(frontDone - rightDone),
                   gyroOK ? "OK" : "FAIL", unsigned(gyroDone - frontDone),
                   leftEncoderOK ? "OK" : "FAIL", unsigned(leftEncoderDone - gyroDone),
-                  rightEncoderOK ? "OK" : "FAIL", unsigned(decisionTime - leftEncoderDone));
+                  rightEncoderOK ? "OK" : "FAIL", unsigned(end - leftEncoderDone));
+  }
+  printStatus();
+  return sensorsOK;
+}
+
+// Every movement loop calls this before its next motor command.
+// BOOT, x, and sensor failures can stop any maneuver.
+bool updateDuringMove() {
+  while (running && millis() - lastSample < SAMPLE_MS) {
+    readControls();
+    delay(1);
+  }
+  readControls();
+  if (!running) return false;
+  readSensors();
+  return running;
+}
+
+bool pauseWithSensors(uint32_t duration) {
+  stopMotors();
+  phase = "PAUSE";
+  const uint32_t start = millis();
+  while (millis() - start < duration) {
+    if (!updateDuringMove()) return false;
+  }
+  return running;
+}
+
+bool frontIsBlocked() {
+  return frontAPDS.raw > FRONT_WALL;
+}
+
+int headingCorrection() {
+  return int(GYRO_Z_SIGN * (yaw - straightHeading) * GYRO_ASSIST);
+}
+
+void driveStraightBesideWalls() {
+  const int left = int(leftAPDS.filtered), right = int(rightAPDS.filtered);
+  int error = 0;
+  if (left > SIDE_WALL && right > SIDE_WALL) error = left - right;
+  else if (left > SIDE_WALL) error = left - SIDE_TARGET;
+  else if (right > SIDE_WALL) error = SIDE_TARGET - right;
+
+  error = constrain(error, -75, 75);
+  const int steering = constrain(int(WALL_KP * error) +
+                                int(WALL_KD * (error - previousWallError)), -120, 120);
+  previousWallError = error;
+  const int correction = steering + headingCorrection();
+  moveMotor(BASE_PWM + correction, BASE_PWM - correction);
+}
+
+bool moveCornerDistance(float targetMM) {
+  const bool forward = targetMM > 0;
+  phase = forward ? "CORNER_ADVANCE" : "CORNER_REVERSE";
+  if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
+    stopRun("corner maneuver needs both encoders");
+    return false;
+  }
+  const int32_t leftStart = leftEncoder.counts, rightStart = rightEncoder.counts;
+  const float wheelCircumference = PI * WHEEL_DIAMETER_MM;
+  const uint32_t start = millis();
+  Serial.printf("%s %.0f mm\n", phase, fabsf(targetMM));
+
+  while (updateDuringMove()) {
+    if (!encoderUsable(leftEncoder) || !encoderUsable(rightEncoder)) {
+      stopRun("encoder read or magnet fault during corner maneuver");
+      return false;
+    }
+    const float leftCounts = fabsf(float(leftEncoder.counts - leftStart));
+    const float rightCounts = fabsf(float(rightEncoder.counts - rightStart));
+    const float movedMM = (leftCounts + rightCounts) * 0.5f * wheelCircumference / 4096.0f;
+    const float remainingMM = fabsf(targetMM) - movedMM;
+    if (frontIsBlocked() || remainingMM <= 0) return pauseWithSensors(100);
+    if (millis() - start >= DISTANCE_TIMEOUT_MS) {
+      stopRun("corner maneuver timed out");
+      return false;
+    }
+    const float remainingDegrees = remainingMM * 360.0f / wheelCircumference;
+    const int speed = constrain(int(1.9f * remainingDegrees), 60, 125);
+    const int drive = forward ? speed : -speed;
+    const int gyro = headingCorrection();
+    moveMotor(drive + gyro, drive - gyro);
+  }
+  return false;
+}
+
+// A timed-out pivot ends the maneuver. The next loop reads the walls again.
+bool turn90(bool turnLeft) {
+  stopMotors();
+  phase = "TURN";
+  const float startYaw = yaw;
+  const uint32_t start = millis();
+  int previousError = 0;
+  bool reached = false;
+  uint32_t reachedAt = 0;
+  Serial.printf("TURN: %s 90 degrees\n", turnLeft ? "LEFT" : "RIGHT");
+
+  while (updateDuringMove()) {
+    const uint32_t now = millis();
+    const float turned = fabsf(yaw - startYaw);
+    const int error = int(90.0f - turned);
+    if (!reached && error <= 0) {
+      reached = true;
+      reachedAt = now;
+    }
+    if (now - start >= TURN_TIMEOUT_MS || (reached && now - reachedAt >= TURN_HOLD_MS)) {
+      stopMotors();
+      straightHeading = yaw;
+      if (!reached) Serial.printf("TURN TIMEOUT: %.1f of 90 degrees. Rechecking walls.\n", turned);
+      return pauseWithSensors(100) && reached;
+    }
+
+    int speed = constrain(int(TURN_KP * error + TURN_KD * (error - previousError)), -165, 165);
+    previousError = error;
+    if (speed > 0 && speed < 55) speed = 55;
+    if (speed < 0 && speed > -55) speed = -55;
+    const int leftDrive = turnLeft ? -speed : speed;
+    moveMotor(leftDrive, -leftDrive);
+  }
+  return false;
+}
+
+void handleFrontWall() {
+  if (!pauseWithSensors(200)) return;
+  const bool leftWall = leftAPDS.filtered > SIDE_OPEN;
+  const bool rightWall = rightAPDS.filtered > SIDE_OPEN;
+
+  if (leftWall && rightWall) {
+    // Dead end: two left pivots followed by the original one-second backup.
+    if (!turn90(TURN_LEFT) || !turn90(TURN_LEFT)) return;
+    phase = "DEAD_END_REVERSE";
+    moveMotor(-BASE_PWM, -BASE_PWM);
+    const uint32_t start = millis();
+    while (millis() - start < 1000) {
+      if (!updateDuringMove()) return;
+    }
+    straightHeading = yaw;
+    pauseWithSensors(100);
+  } else if (turn90(leftWall ? TURN_RIGHT : TURN_LEFT)) {
+    moveCornerDistance(-CORNER_BACKUP_MM);
+  }
+}
+
+void followLeftWall() {
+  phase = "FOLLOW";
+  const bool leftWall = leftAPDS.filtered > SIDE_OPEN;
+  const bool leftOpening = hadLeftWall && !leftWall;
+  hadLeftWall = leftWall;
+
+  if (leftOpening) {
+    if (moveCornerDistance(CORNER_ADVANCE_MM) && turn90(TURN_LEFT)) {
+      moveCornerDistance(-CORNER_BACKUP_MM);
+    }
+  } else if (frontIsBlocked()) {
+    handleFrontWall();
+  } else {
+    driveStraightBesideWalls();
     return;
   }
 
-  switch (motion) {
-    case Motion::Follow: followWalls(decisionTime); break;
-    case Motion::DistanceMove: updateDistanceMove(decisionTime); break;
-    case Motion::Turn: updateTurn(decisionTime); break;
-    case Motion::Pause: updatePause(decisionTime); break;
-    case Motion::DeadEndReverse:
-      if (decisionTime - phaseStarted >= DEAD_END_REVERSE_MS) {
-        headingYaw = yaw;
-        beginPause(Step::Follow, 100, decisionTime);
-      }
-      break;
-    case Motion::Idle: break;
-  }
-}
-
-void printStatus() {
-  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
-                motionName(), unsigned(leftAPDS.raw), unsigned(rightAPDS.raw),
-                unsigned(frontAPDS.raw), yaw, long(leftEncoder.counts),
-                encoderUsable(leftEncoder) ? "OK" : "CHECK", long(rightEncoder.counts),
-                encoderUsable(rightEncoder) ? "OK" : "CHECK", leftPWM, rightPWM, lastStop);
+  // Start a new steering calculation after a corner or turn attempt.
+  previousWallError = 0;
+  hadLeftWall = leftAPDS.filtered > SIDE_OPEN;
+  if (running) phase = "FOLLOW";
 }
 
 void printColorSample() {
-  const as7341_color_channel_t channels[] = {
+  const as7341_color_channel_t bands[] = {
       AS7341_CHANNEL_415nm_F1, AS7341_CHANNEL_445nm_F2, AS7341_CHANNEL_480nm_F3,
       AS7341_CHANNEL_515nm_F4, AS7341_CHANNEL_555nm_F5, AS7341_CHANNEL_590nm_F6,
       AS7341_CHANNEL_630nm_F7, AS7341_CHANNEL_680nm_F8,
       AS7341_CHANNEL_CLEAR, AS7341_CHANNEL_NIR,
   };
   Serial.print("AS7341 F1..F8,Clear,NIR:");
-  for (auto channel : channels) Serial.printf(" %u", unsigned(colorSensor.getChannel(channel)));
+  for (auto band : bands) Serial.printf(" %u", unsigned(colorSensor.getChannel(band)));
   Serial.println();
 }
 
 void setup() {
-  setMotorIOs();
-  pinMode(START_BUTTON_PIN, INPUT_PULLUP);
+  setupMotorPins();
+  pinMode(BOOT_BUTTON, INPUT_PULLUP);
   Serial.begin(115200);
   delay(750);
-  Serial.println("\nMAZESOLVER | ESP32 Dev Module | continuous left-wall following");
+  Serial.println("\nMAZESOLVER | ESP32 Dev Module | left-wall following");
+
   if (!Wire.begin(SDA_PIN, SCL_PIN, 100000)) {
     Serial.println("ERROR: could not start I2C.");
     return;
@@ -363,8 +342,8 @@ void setup() {
     Serial.printf("APDS %s CH%u: %s\n", sensor->name, unsigned(sensor->channel),
                   ok ? "READY" : "INIT ERROR");
   }
-  imuReady = selectMux(0) && initIMU();
-  Serial.println(imuReady ? "Gyro calibrated." : "IMU init/calibration failed. Keep still and reset.");
+  gyroReady = selectMux(0) && initIMU();
+  Serial.println(gyroReady ? "Gyro calibrated." : "IMU init/calibration failed. Keep still and reset.");
   colorReady = initColor();
   Serial.println(colorReady ? "AS7341 CH2 ready. Color samples print while stopped."
                             : "AS7341 CH2 init failed. Check SD2/SC2.");
@@ -372,18 +351,37 @@ void setup() {
 }
 
 void loop() {
-  serviceControls();
-  const uint32_t now = millis();
-  if (now - lastControl >= CONTROL_MS) controlStep(now);
-  if (now - lastPrint >= PRINT_MS) {
-    lastPrint = now;
-    printStatus();
+  readControls();
+  if (millis() - lastSample < SAMPLE_MS) {
+    delay(1);
+    return;
   }
-  if (motion == Motion::Idle && colorReady && now - lastColorSample >= 600) {
-    const bool colorSampleOK = sampleColor();
-    lastColorSample = millis();
-    if (colorSampleOK) printColorSample();
+
+  const bool sensorsOK = readSensors();
+  if (running) {
+    followLeftWall();
+    return;
+  }
+
+  if (sensorsOK && !startRequested) checkHandStart();
+  if (startRequested) {
+    startRequested = false;
+    if (sensorsOK) {
+      running = true;
+      phase = "FOLLOW";
+      straightHeading = yaw;
+      hadLeftWall = leftAPDS.filtered > SIDE_OPEN;
+      previousWallError = 0;
+      lastStop = "none";
+      Serial.println("START: left-wall following. Press BOOT or send x to stop.");
+      return;
+    }
+    Serial.println("START BLOCKED: check the APDS readings and IMU.");
+  }
+
+  if (colorReady && millis() - lastColorSample >= 600) {
+    if (sampleColor()) printColorSample();
     else Serial.println("AS7341 CH2 read timed out or channel selection failed.");
+    lastColorSample = millis();
   }
-  delay(1);
 }
