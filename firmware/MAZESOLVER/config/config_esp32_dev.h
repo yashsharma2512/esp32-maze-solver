@@ -1,11 +1,4 @@
-// Pick one stage, then upload. Each stage keeps the earlier maze behavior.
-constexpr int FLOW_TEST_STAGE = 2;
-// 1 = straight wall following, stop at a front wall
-// 2 = add the original front-wall turns and dead-end response
-// 3 = add side-opening maneuvers
-// 4 = run the full maze flow with click switches and victim detection
-static_assert(FLOW_TEST_STAGE >= 1 && FLOW_TEST_STAGE <= 4, "Choose a stage from 1 to 4.");
-
+// Front proximity threshold and corner distances.
 constexpr int FRONT_WALL_THRESHOLD = 100;
 constexpr int OPENING_ADVANCE_MM = 220;
 constexpr int TURN_BACKUP_MM = 30;

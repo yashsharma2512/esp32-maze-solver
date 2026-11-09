@@ -3,17 +3,9 @@
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
 
-void stopFlowTest(const char *reason, int reading) {
-  moveMotor(0, 0);
-  digitalWrite(STBY, LOW);
-  Serial.printf("FLOW STOP: %s=%d. Reset to run again.\n", reason, reading);
-  while (true) delay(50);
-}
-
 void setup() {
   /* Initialize Serial module */
   SerialDebug.begin(115200);
-  Serial.printf("FLOW TEST STAGE %d | front APDS CH%d\n", FLOW_TEST_STAGE, FL);
 
   Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
   // SerialUSB.begin(115200);
@@ -48,10 +40,8 @@ void setup() {
   moveMotor(0, 0);
 
   // reset both encoders to zero degrees
-  if (FLOW_TEST_STAGE >= 2) {
-    encLeft.init();
-    encRight.init();
-  }
+  encLeft.init();
+  encRight.init();
 
   /* Scan I2C devices (uncomment to check connected I2C device addresses) */
   // testI2C();
@@ -99,10 +89,8 @@ void setup() {
   mpu.calcOffsets(true, true);  // gyro and accel
   mpu.resetAngleZ();
 
-  if (FLOW_TEST_STAGE >= 2) {
-    encLeft.tare();
-    encRight.tare();
-  }
+  encLeft.tare();
+  encRight.tare();
 
 
   // while (IR_CALIBRATE) {

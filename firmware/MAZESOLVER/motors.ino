@@ -166,11 +166,6 @@ void turnBot(int degrees, int direction, int _curve) {
   prevTile = 0;
   if (!_curve)
     moveMotor(0, 0);
-  if (FLOW_TEST_STAGE < 4) {
-    Serial.printf("FLOW TURN %s target=%d measured=%.1f reached=%u\n",
-                  direction == LEFT ? "LEFT" : "RIGHT", degrees,
-                  fabsf(mpu.getAngleZ()), unsigned(enableExitTimer));
-  }
   mpu.resetAngleZ();
   resetEncoder();
 }
@@ -288,7 +283,6 @@ void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
 }
 
 void interpretClicks() {
-  if (FLOW_TEST_STAGE < 4) return;
   if (!digitalRead(LEFTCLICK)) {
     moveMotor(0, 0);
     delayWithSensorUpdate(50);

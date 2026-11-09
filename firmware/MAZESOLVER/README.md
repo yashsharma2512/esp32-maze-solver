@@ -1,20 +1,18 @@
-# Maze flow tuning
+# Maze settings
 
-Open MAZESOLVER.ino and select **ESP32 Dev Module**. Set FLOW_TEST_STAGE in
-[config/config_esp32_dev.h](config/config_esp32_dev.h), then upload. The front
-APDS is on CH6.
+Open [MAZESOLVER.ino](MAZESOLVER.ino) in Arduino IDE and select
+**ESP32 Dev Module**. See the [project README](../../README.md) for wiring,
+libraries, and the hand-gesture start sequence.
 
-Open Serial Monitor at **115200 baud**. Lift the wheels for the first startup
-check. Show your hand to the left APDS, remove it, and let the gyro calibrate
-while the robot is still. Show your hand to the right APDS to start.
-Use the motor power switch to stop a run.
+The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
+complete maze routine.
 
-| Stage | Course setup | What to tune |
-| --- | --- | --- |
-| 1 | Straight wall on the left, open right side, then a wall ahead. The robot stops at the front wall. | Use filtered L at the desired gap for leftWallOffset. Compare readings with and without a wall before changing wallSense. Check P and D before tuning kp_move or kd_move. Use F to tune FRONT_WALL_THRESHOLD. |
-| 2 | Block the front with one side open. Repeat with the other side open, then try a dead end. | Compare the measured turn angle against 90 degrees before changing kp_turn or kd_turn. Check TURN_BACKUP_MM on the floor. |
-| 3 | Add a single left opening with clear space ahead. Mark where the pivot starts and ends. | Check OPENING_ADVANCE_MM and TURN_BACKUP_MM. Check encoder distance scaling first if both moves measure wrong. |
-| 4 | Run the complete route with the original click-switch and victim-detection paths enabled. | Verify how the features interact using the settings from the earlier stages. |
-
-Tune one value per run. In stages 1 through 3 an APDS read failure stops the
-test and reports the channel. Fix a repeated failure before driving on the floor.
+| Setting | What it controls |
+| --- | --- |
+| `leftWallOffset` | Filtered APDS target while following one wall |
+| `wallSense` | Side sensor cutoff for straight steering |
+| `kp_move`, `kd_move` | Straight steering gains |
+| `FRONT_WALL_THRESHOLD` | Front APDS count that triggers front-wall handling when exceeded |
+| `kp_turn`, `kd_turn` | Gyro turn gains |
+| `OPENING_ADVANCE_MM` | Forward distance before turning into a side opening |
+| `TURN_BACKUP_MM` | Backup distance after a single turn |

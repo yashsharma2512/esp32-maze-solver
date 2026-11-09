@@ -65,7 +65,7 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  if (FLOW_TEST_STAGE == 4) victimDetection();
+  victimDetection();
 
   //IR
   // interpretIR(false);
@@ -83,18 +83,9 @@ void wallFollow(int wallToFollow) {
 
     moveStraightAligned();
 
-    if (FLOW_TEST_STAGE < 4) {
-      static unsigned long lastPrint = 0;
-      if (millis() - lastPrint >= 250) {
-        lastPrint = millis();
-        Serial.printf("FLOW L=%.1f R=%.1f F=%d P=%d D=%d yaw=%+.1f\n",
-                      dl_filtered, dr_filtered, (fl + fr) / 2, p_move, d_move, mpu.getAngleZ());
-      }
-    }
-
     interpretClicks();
 
-    if (FLOW_TEST_STAGE >= 3 && _turn != 0) {
+    if (_turn != 0) {
       if (_turn == -1 and wallToFollow == LEFT)
       {
         Serial.println("LEFT");
@@ -120,11 +111,8 @@ void wallFollow(int wallToFollow) {
         _turn = detectTurn(leftWall, rightWall);
       }
     }
-    const int front = (fl + fr) / 2;
-    if (front > FRONT_WALL_THRESHOLD) {
+    if ((fl + fr) / 2 > FRONT_WALL_THRESHOLD) {
       moveMotor(0, 0);
-      if (FLOW_TEST_STAGE == 1) stopFlowTest("front wall reading", front);
-      if (FLOW_TEST_STAGE < 4) Serial.printf("FLOW FRONT WALL F=%d\n", front);
       delayWithSensorUpdate(200);
       leftWall = (dl_filtered > leftTurnSense);
       rightWall = (dr_filtered > rightTurnSense);

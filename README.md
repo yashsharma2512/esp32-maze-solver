@@ -4,12 +4,10 @@ Open [MAZESOLVER.ino](firmware/MAZESOLVER/MAZESOLVER.ino) in Arduino IDE and
 select **ESP32 Dev Module** for the 38-pin ESP32. Keep the whole sketch
 folder together so Arduino IDE can compile all the tabs.
 
-The firmware runs the original maze routine with a stage setting for
-tuning straight steering, front-wall turns, and side openings. The current
-stage and sensor thresholds are in
-[config_esp32_dev.h](firmware/MAZESOLVER/config/config_esp32_dev.h).
-See the [flow-tuning guide](firmware/MAZESOLVER/README.md) for the course
-setup and parameters to check at each stage.
+The firmware runs the full left-wall maze routine, including front-wall turns,
+side openings, dead ends, and click-switch recovery. See the
+[maze settings guide](firmware/MAZESOLVER/README.md) for steering and turn
+parameters.
 
 ## Libraries
 

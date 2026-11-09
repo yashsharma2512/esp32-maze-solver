@@ -29,7 +29,6 @@ int readProximity(uint8_t channel) {
       return Wire.read();
     }
   }
-  if (FLOW_TEST_STAGE < 4) stopFlowTest("APDS read failed on TCA channel", channel);
   Serial.println("error");
   return 0;
 }
