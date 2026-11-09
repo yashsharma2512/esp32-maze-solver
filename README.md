@@ -70,8 +70,20 @@ The sketch checks the sensor ID at `0x39`, turns on the breakout's illumination
 LED at 4 mA, and prints ten raw readings per line. The LED stays on during
 sampling. For a color comparison, hold different surfaces at the same distance
 from the sensor under steady ambient light. The output shows the spectral bands,
-Clear, and Near IR. These readings can be used to develop color thresholds for
-the robot's lighting and mounting.
+Clear, and Near IR.
+
+To calibrate for the robot's floor, keep the sensor at its mounted height with
+the LED on. Place a matte black reference underneath and send `b`, then place a
+matte white reference at the same distance and send `w`. Each reference averages
+12 scans. After both captures, `REL_PCT` prints values in the same order as the
+raw readings. Black is 0% and white is 100% for each band. Readings outside that
+reference range can go below 0% or above 100%. `NA` means the band clipped or
+the references differ by fewer than 20 counts. The values compare surfaces in
+this setup. They are not absolute reflectance measurements.
+
+Record the reference lines and several `REL_PCT` lines from each actual floor
+material. References are held in RAM until reset. Send `r` to clear them. If you
+change the sensor height, lighting, or exposure, capture both references again.
 
 **The AS7341 and APDS-9960 share `0x39`.** The sketch selects only TCA channel 2
 before initializing the AS7341. The APDS sensors can stay connected to their own

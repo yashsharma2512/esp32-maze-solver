@@ -55,4 +55,6 @@ assembled robot before running a complete maze.
 Navigation stops on an APDS read failure or saturation, an IMU failure, or a
 motion timeout. Corner clearance also requires two usable encoder magnets.
 The AS7341 prints while stopped so its library cannot delay motor control.
-Color readings are telemetry for calibration. They do not trigger navigation.
+Use the [standalone color calibration test](../../README.md#as7341-color-sensor-test)
+to capture black and white references and compare your floor materials. The main
+firmware reports raw readings while stopped.
