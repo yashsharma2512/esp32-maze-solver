@@ -9,6 +9,10 @@ side openings, dead ends, and click-switch recovery. See the
 [maze settings guide](firmware/MAZESOLVER/README.md) for steering and turn
 parameters.
 
+For stage-by-stage testing, open the separate
+[MAZESOLVER_TUNING.ino sketch](tuning/MAZESOLVER_TUNING/MAZESOLVER_TUNING.ino).
+Choose stages 1–4 in its own config file. [Flow-tuning guide](tuning/MAZESOLVER_TUNING/README.md)
+
 ## Libraries
 
 Install **Adafruit NeoPixel** and **MPU6050_light 1.2.1**. The original
