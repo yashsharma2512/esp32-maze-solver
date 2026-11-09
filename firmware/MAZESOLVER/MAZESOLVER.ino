@@ -1,7 +1,8 @@
-// ESP32 maze robot. Start reading at loop(), then look at followLeftWall().
+// ESP32 maze robot. Start with loop() in Step 6. See DEBUGGING.md for bench tests.
 // Hardware.h contains the pins and sensor drivers.
 #include "Hardware.h"
 
+// STEP 1 - Settings. Pin and channel assignments are in Hardware.h.
 // Wall-follow settings from the original robot.
 constexpr int BASE_PWM = 100;
 constexpr int FRONT_WALL = 40, SIDE_OPEN = 9, SIDE_WALL = 25;
@@ -33,6 +34,111 @@ const char *phase = "IDLE";
 const char *lastStop = "none";
 uint32_t lastSample = 0;
 
+// STEP 2 - Start the board and check which devices are ready.
+void setup() {
+  setupMotorPins();
+  pinMode(BOOT_BUTTON, INPUT_PULLUP);
+  Serial.begin(115200);
+  delay(750);
+  Serial.println("\nMAZESOLVER | ESP32 Dev Module | left-wall following");
+  Serial.println("STEP 2: Checking the I2C bus. Motors are in standby.");
+
+  if (!Wire.begin(SDA_PIN, SCL_PIN, 100000)) {
+    Serial.println("ERROR: could not start I2C.");
+    return;
+  }
+  Wire.setTimeOut(20);
+  if (!selectMux(0)) {
+    Serial.println("ERROR: TCA9548A at 0x70 did not respond.");
+    return;
+  }
+  Wire.beginTransmission(APDS_ADDR);
+  if (Wire.endTransmission() == 0) {
+    Serial.println("ERROR: 0x39 is on the main bus. Put the AS7341 on TCA CH2.");
+    return;
+  }
+  busReady = true;
+  Serial.println("STEP 3: Checking the left, right, and front APDS, gyro, and color sensor.");
+
+  apdsReady = true;
+  for (const Proximity *sensor : {&leftAPDS, &rightAPDS, &frontAPDS}) {
+    const bool ok = initAPDS(*sensor);
+    apdsReady = apdsReady && ok;
+    Serial.printf("APDS %s CH%u: %s\n", sensor->name, unsigned(sensor->channel),
+                  ok ? "READY" : "INIT ERROR");
+  }
+  gyroReady = selectMux(0) && initIMU();
+  Serial.println(gyroReady ? "Gyro calibrated." : "IMU init/calibration failed. Keep still and reset.");
+  colorReady = initColor();
+  Serial.println(colorReady ? "AS7341 CH2 ready. Color samples print while stopped."
+                            : "AS7341 CH2 init failed. Check SD2/SC2.");
+  Serial.println("STEP 4: Start with LEFT then RIGHT hand gestures, BOOT, or s. Stop with BOOT or x.");
+}
+
+// STEP 3 - Read sensors and report faults.
+void printStatus() {
+  static uint32_t lastPrint = 0;
+  if (millis() - lastPrint < 250) return;
+  lastPrint = millis();
+  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
+                phase, unsigned(leftAPDS.raw), unsigned(rightAPDS.raw), unsigned(frontAPDS.raw),
+                yaw, long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
+                long(rightEncoder.counts), encoderUsable(rightEncoder) ? "OK" : "CHECK",
+                leftPWM, rightPWM, lastStop);
+}
+
+// Read one set of sensors. Timestamp each read so an intermittent fault is traceable.
+bool readSensors() {
+  const uint32_t start = millis();
+  if (running && start - lastSample > SENSOR_LIMIT_MS) stopRun("navigation loop ran late");
+  lastSample = start;
+  if (!busReady) return false;
+
+  const bool leftOK = apdsReady && sampleAPDS(leftAPDS);
+  const uint32_t leftDone = millis();
+  const bool rightOK = apdsReady && sampleAPDS(rightAPDS);
+  const uint32_t rightDone = millis();
+  const bool frontOK = apdsReady && sampleAPDS(frontAPDS);
+  const uint32_t frontDone = millis();
+  const bool gyroOK = gyroReady && sampleIMU();
+  const uint32_t gyroDone = millis();
+  const bool leftEncoderOK = sampleEncoder(leftEncoder);
+  const uint32_t leftEncoderDone = millis();
+  const bool rightEncoderOK = sampleEncoder(rightEncoder);
+  const uint32_t end = millis();
+
+  const bool sensorsOK = leftOK && rightOK && frontOK && gyroOK;
+  if (running && (!sensorsOK || end - start > SENSOR_LIMIT_MS)) {
+    const char *faultPhase = phase;
+    stopRun("navigation sensor unavailable or late");
+    Serial.printf("NAV FAULT phase=%s cycle=%ums limit=%ums | CH0=%s/%ums CH1=%s/%ums CH7=%s/%ums "
+                  "IMU=%s/%ums ENC5=%s/%ums ENC4=%s/%ums\n",
+                  faultPhase, unsigned(end - start), unsigned(SENSOR_LIMIT_MS),
+                  leftOK ? "OK" : "FAIL", unsigned(leftDone - start),
+                  rightOK ? "OK" : "FAIL", unsigned(rightDone - leftDone),
+                  frontOK ? "OK" : "FAIL", unsigned(frontDone - rightDone),
+                  gyroOK ? "OK" : "FAIL", unsigned(gyroDone - frontDone),
+                  leftEncoderOK ? "OK" : "FAIL", unsigned(leftEncoderDone - gyroDone),
+                  rightEncoderOK ? "OK" : "FAIL", unsigned(end - leftEncoderDone));
+    Serial.println("STEP 3: Copy the NAV FAULT line and follow the sensor checks in DEBUGGING.md.");
+  }
+  printStatus();
+  return sensorsOK;
+}
+
+void printColorSample() {
+  const as7341_color_channel_t bands[] = {
+      AS7341_CHANNEL_415nm_F1, AS7341_CHANNEL_445nm_F2, AS7341_CHANNEL_480nm_F3,
+      AS7341_CHANNEL_515nm_F4, AS7341_CHANNEL_555nm_F5, AS7341_CHANNEL_590nm_F6,
+      AS7341_CHANNEL_630nm_F7, AS7341_CHANNEL_680nm_F8,
+      AS7341_CHANNEL_CLEAR, AS7341_CHANNEL_NIR,
+  };
+  Serial.print("AS7341 F1..F8,Clear,NIR:");
+  for (auto band : bands) Serial.printf(" %u", unsigned(colorSensor.getChannel(band)));
+  Serial.println();
+}
+
+// STEP 4 - Handle start and stop commands.
 // Start or stop from USB Serial or the onboard BOOT button.
 void stopRun(const char *reason) {
   stopMotors();
@@ -90,55 +196,7 @@ void checkHandStart() {
   }
 }
 
-void printStatus() {
-  static uint32_t lastPrint = 0;
-  if (millis() - lastPrint < 250) return;
-  lastPrint = millis();
-  Serial.printf("%s APDS L=%u R=%u F=%u | yaw=%+.1f | enc L=%ld(%s) R=%ld(%s) | PWM %d/%d | last_stop=%s\n",
-                phase, unsigned(leftAPDS.raw), unsigned(rightAPDS.raw), unsigned(frontAPDS.raw),
-                yaw, long(leftEncoder.counts), encoderUsable(leftEncoder) ? "OK" : "CHECK",
-                long(rightEncoder.counts), encoderUsable(rightEncoder) ? "OK" : "CHECK",
-                leftPWM, rightPWM, lastStop);
-}
-
-// Read one set of sensors. Timestamp each read so an intermittent fault is traceable.
-bool readSensors() {
-  const uint32_t start = millis();
-  if (running && start - lastSample > SENSOR_LIMIT_MS) stopRun("navigation loop ran late");
-  lastSample = start;
-  if (!busReady) return false;
-
-  const bool leftOK = apdsReady && sampleAPDS(leftAPDS);
-  const uint32_t leftDone = millis();
-  const bool rightOK = apdsReady && sampleAPDS(rightAPDS);
-  const uint32_t rightDone = millis();
-  const bool frontOK = apdsReady && sampleAPDS(frontAPDS);
-  const uint32_t frontDone = millis();
-  const bool gyroOK = gyroReady && sampleIMU();
-  const uint32_t gyroDone = millis();
-  const bool leftEncoderOK = sampleEncoder(leftEncoder);
-  const uint32_t leftEncoderDone = millis();
-  const bool rightEncoderOK = sampleEncoder(rightEncoder);
-  const uint32_t end = millis();
-
-  const bool sensorsOK = leftOK && rightOK && frontOK && gyroOK;
-  if (running && (!sensorsOK || end - start > SENSOR_LIMIT_MS)) {
-    const char *faultPhase = phase;
-    stopRun("navigation sensor unavailable or late");
-    Serial.printf("NAV FAULT phase=%s cycle=%ums limit=%ums | CH0=%s/%ums CH1=%s/%ums CH7=%s/%ums "
-                  "IMU=%s/%ums ENC5=%s/%ums ENC4=%s/%ums\n",
-                  faultPhase, unsigned(end - start), unsigned(SENSOR_LIMIT_MS),
-                  leftOK ? "OK" : "FAIL", unsigned(leftDone - start),
-                  rightOK ? "OK" : "FAIL", unsigned(rightDone - leftDone),
-                  frontOK ? "OK" : "FAIL", unsigned(frontDone - rightDone),
-                  gyroOK ? "OK" : "FAIL", unsigned(gyroDone - frontDone),
-                  leftEncoderOK ? "OK" : "FAIL", unsigned(leftEncoderDone - gyroDone),
-                  rightEncoderOK ? "OK" : "FAIL", unsigned(end - leftEncoderDone));
-  }
-  printStatus();
-  return sensorsOK;
-}
-
+// STEP 5 - Carry out a move while checking the sensors and stop button.
 // Every movement loop calls this before its next motor command.
 // BOOT, x, and sensor failures can stop any maneuver.
 bool updateDuringMove() {
@@ -256,6 +314,7 @@ bool turn90(bool turnLeft) {
   return false;
 }
 
+// STEP 6 - Choose the next move and repeat.
 void handleFrontWall() {
   if (!pauseWithSensors(200)) return;
   const bool leftWall = leftAPDS.filtered > SIDE_OPEN;
@@ -298,56 +357,6 @@ void followLeftWall() {
   previousWallError = 0;
   hadLeftWall = leftAPDS.filtered > SIDE_OPEN;
   if (running) phase = "FOLLOW";
-}
-
-void printColorSample() {
-  const as7341_color_channel_t bands[] = {
-      AS7341_CHANNEL_415nm_F1, AS7341_CHANNEL_445nm_F2, AS7341_CHANNEL_480nm_F3,
-      AS7341_CHANNEL_515nm_F4, AS7341_CHANNEL_555nm_F5, AS7341_CHANNEL_590nm_F6,
-      AS7341_CHANNEL_630nm_F7, AS7341_CHANNEL_680nm_F8,
-      AS7341_CHANNEL_CLEAR, AS7341_CHANNEL_NIR,
-  };
-  Serial.print("AS7341 F1..F8,Clear,NIR:");
-  for (auto band : bands) Serial.printf(" %u", unsigned(colorSensor.getChannel(band)));
-  Serial.println();
-}
-
-void setup() {
-  setupMotorPins();
-  pinMode(BOOT_BUTTON, INPUT_PULLUP);
-  Serial.begin(115200);
-  delay(750);
-  Serial.println("\nMAZESOLVER | ESP32 Dev Module | left-wall following");
-
-  if (!Wire.begin(SDA_PIN, SCL_PIN, 100000)) {
-    Serial.println("ERROR: could not start I2C.");
-    return;
-  }
-  Wire.setTimeOut(20);
-  if (!selectMux(0)) {
-    Serial.println("ERROR: TCA9548A at 0x70 did not respond.");
-    return;
-  }
-  Wire.beginTransmission(APDS_ADDR);
-  if (Wire.endTransmission() == 0) {
-    Serial.println("ERROR: 0x39 is on the main bus. Put the AS7341 on TCA CH2.");
-    return;
-  }
-  busReady = true;
-
-  apdsReady = true;
-  for (const Proximity *sensor : {&leftAPDS, &rightAPDS, &frontAPDS}) {
-    const bool ok = initAPDS(*sensor);
-    apdsReady = apdsReady && ok;
-    Serial.printf("APDS %s CH%u: %s\n", sensor->name, unsigned(sensor->channel),
-                  ok ? "READY" : "INIT ERROR");
-  }
-  gyroReady = selectMux(0) && initIMU();
-  Serial.println(gyroReady ? "Gyro calibrated." : "IMU init/calibration failed. Keep still and reset.");
-  colorReady = initColor();
-  Serial.println(colorReady ? "AS7341 CH2 ready. Color samples print while stopped."
-                            : "AS7341 CH2 init failed. Check SD2/SC2.");
-  Serial.println("Start with LEFT then RIGHT hand gestures, BOOT, or serial s. Stop with BOOT or x.");
 }
 
 void loop() {

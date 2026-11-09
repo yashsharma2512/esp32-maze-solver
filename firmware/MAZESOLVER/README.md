@@ -1,5 +1,8 @@
 # Main maze-solver firmware
 
+Use the [step-by-step debugging guide](DEBUGGING.md) to test one part at a
+time. Its step numbers match the comments in `MAZESOLVER.ino`.
+
 Open `MAZESOLVER.ino` with `Hardware.h` in the same sketch folder. In Arduino
 IDE, select **ESP32 Dev Module** and the robot's USB port. Install **Adafruit
 AS7341** and **Adafruit BusIO** if needed. Upload and open Serial Monitor at

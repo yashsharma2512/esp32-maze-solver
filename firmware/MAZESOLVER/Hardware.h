@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <Adafruit_AS7341.h>
 
-// ESP32 header pins. The three motor pins are IN1, IN2, and PWM.
+// HARDWARE 1 - Wiring map. The three motor pins are IN1, IN2, and PWM.
 constexpr int SDA_PIN = 21, SCL_PIN = 22;
 constexpr int LEFT_FORWARD = 25, LEFT_REVERSE = 26, LEFT_SPEED = 27;
 constexpr int RIGHT_FORWARD = 18, RIGHT_REVERSE = 19, RIGHT_SPEED = 23;
@@ -40,6 +40,7 @@ float gyroBias = 0, yaw = 0;
 uint32_t lastGyroSample = 0;
 int leftPWM = 0, rightPWM = 0;
 
+// HARDWARE 2 - I2C communication. Select a TCA channel before reading its device.
 bool selectMux(uint8_t mask) {
   Wire.beginTransmission(TCA_ADDR);
   Wire.write(mask);
@@ -67,6 +68,7 @@ bool writeReg(uint8_t address, uint8_t reg, uint8_t value) {
   return Wire.endTransmission() == 0;
 }
 
+// HARDWARE 3 - Motor driver. STBY LOW turns off both motor outputs.
 void stopMotors() {
   digitalWrite(MOTOR_STANDBY, LOW);
   analogWrite(LEFT_SPEED, 0);
@@ -102,6 +104,7 @@ void moveMotor(int left, int right) {
   digitalWrite(MOTOR_STANDBY, HIGH);
 }
 
+// HARDWARE 4 - APDS wall sensors. Read a proximity count for each side.
 bool initAPDS(const Proximity &sensor) {
   uint8_t id = 0, enable = 0, pulse = 0;
   if (!selectChannel(sensor.channel) || !readReg(APDS_ADDR, 0x92, &id, 1) ||
@@ -128,6 +131,7 @@ bool sampleAPDS(Proximity &sensor) {
   return true;
 }
 
+// HARDWARE 5 - Wheel encoders. Track how far each wheel has turned.
 bool sampleEncoder(Encoder &encoder) {
   uint8_t data[3]; // STATUS, RAW_ANGLE_H, RAW_ANGLE_L
   encoder.readOK = selectChannel(encoder.channel) &&
@@ -154,6 +158,7 @@ bool encoderUsable(const Encoder &encoder) {
   return encoder.readOK && (encoder.status & 0x38) == 0x20;
 }
 
+// HARDWARE 6 - Gyro. Measure rotation and add it up to get the heading.
 bool readGyroZ(float &rate) {
   uint8_t data[2];
   if (!readReg(imuAddress, 0x47, data, sizeof(data))) return false;
@@ -199,6 +204,7 @@ bool sampleIMU() {
   return true;
 }
 
+// HARDWARE 7 - Floor color sensor and its light.
 bool initColor() {
   if (!selectChannel(COLOR_CH) || !colorSensor.begin(AS7341_I2CADDR_DEFAULT, &Wire)) {
     return false;
