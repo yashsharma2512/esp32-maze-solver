@@ -51,6 +51,7 @@ void setup() {
   initAPDS(FL);
   initAPDS(DL);
   initAPDS(DR);
+  setupColorSensor();
 
   while (0) {
     updateProximitySensors();

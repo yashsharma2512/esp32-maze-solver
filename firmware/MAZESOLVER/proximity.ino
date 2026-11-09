@@ -99,6 +99,7 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
 
 void waitForUserInput1() {
   while (1) {
+    checkColorCalibration();
     updateProximitySensors();
     mpu.update();
     if (dl > 150)

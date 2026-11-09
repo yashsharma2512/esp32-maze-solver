@@ -37,6 +37,7 @@ float rightTurnSense = 9;
 #define FR FL // The original front-right input shares the front reading
 #define DL 0 // Left APDS on TCA CH0
 #define DR 1 // Right APDS on TCA CH1
+constexpr uint8_t COLOR_CH = 2; // Bottom-facing AS7341 on TCA CH2
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////

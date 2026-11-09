@@ -56,6 +56,7 @@ MPU6050 mpu(Wire);
 
 // APDS9960 I2C address
 #define APDS9960_ADDRESS 0x39
+constexpr size_t COLOR_BAND_COUNT = 10;  // AS7341 F1 through F8, Clear, and NIR.
 
 // APDS9960 register addresses
 #define APDS9960_REG_ENABLE 0x80

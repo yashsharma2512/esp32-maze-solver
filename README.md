@@ -21,6 +21,8 @@ sketch uses this helper in the public section of the library's
 
     void resetAngleZ() { angleZ = 0; }
 
+The main sketch also uses **Adafruit AS7341** and **Adafruit BusIO**.
+
 ## Wiring
 
 | Device | Connection |
@@ -29,6 +31,7 @@ sketch uses this helper in the public section of the library's
 | TCA9548A | Main bus at `0x70` |
 | MPU6050 | Main bus at `0x68` |
 | Left, right, front APDS-9960 | TCA CH0, CH1, CH6 respectively |
+| Bottom-facing AS7341 | TCA CH2. Connect SDA to SD2, SCL to SC2, and ground to common GND. |
 | Left, right AS5600 | TCA CH5, CH4 respectively |
 | TB6612 left IN1 / IN2 / PWM | GPIO25 / GPIO26 / GPIO27 |
 | TB6612 right IN1 / IN2 / PWM | GPIO18 / GPIO19 / GPIO23 |
@@ -37,9 +40,15 @@ sketch uses this helper in the public section of the library's
 | Optional NeoPixel data | GPIO4 |
 | Optional victim-detection UART | GPIO16 RX, GPIO17 TX |
 
+For the Adafruit AS7341 breakout, connect VIN to 3.3 V.
+[AS7341 pinout](https://learn.adafruit.com/adafruit-as7341-10-channel-light-color-sensor-breakout/pinouts)
+
 ## Start a run
 
 Open Serial Monitor at **115200 baud**. Lift the wheels for the first test.
 Show a hand to the left APDS and remove it. Keep the robot still until
 `MPU calibrated.` appears. Then show a hand to the right APDS and remove it
 to start. Use the motor power switch to stop the run.
+
+For floor color readings or calibration, send `c` before the first hand
+gesture. [AS7341 calibration commands](firmware/MAZESOLVER/README.md#floor-color-calibration)
