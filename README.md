@@ -13,6 +13,10 @@ For stage-by-stage testing, open the separate
 [MAZESOLVER_TUNING.ino sketch](tuning/MAZESOLVER_TUNING/MAZESOLVER_TUNING.ino).
 Choose stages 1–4 in its own config file. [Flow-tuning guide](tuning/MAZESOLVER_TUNING/README.md)
 
+To calibrate wheel travel independently of the maze behavior, use the
+[AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
+set distance using both encoders and shows their counts and calculated travel.
+
 ## Libraries
 
 Install **Adafruit NeoPixel** and **MPU6050_light 1.2.1**. The original

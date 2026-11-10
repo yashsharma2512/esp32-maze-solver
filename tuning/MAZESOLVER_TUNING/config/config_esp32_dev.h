@@ -1,12 +1,12 @@
 // Pick one stage, then upload. Each stage keeps the earlier maze behavior.
-constexpr int FLOW_TEST_STAGE = 2;
+constexpr int FLOW_TEST_STAGE = 4;
 // 1 = straight wall following, stop at a front wall
 // 2 = add the original front-wall turns and dead-end response
 // 3 = add side-opening maneuvers
 // 4 = run the full maze flow with click switches and victim detection
 static_assert(FLOW_TEST_STAGE >= 1 && FLOW_TEST_STAGE <= 4, "Choose a stage from 1 to 4.");
 
-constexpr int FRONT_WALL_THRESHOLD = 100;
+constexpr int FRONT_WALL_THRESHOLD = 150;
 constexpr int OPENING_ADVANCE_MM = 220;
 constexpr int TURN_BACKUP_MM = 30;
 
@@ -27,7 +27,7 @@ const float alpha = 0.65; // Smoothing factor (range 0 - 1) (value directly prop
 
 int wallSense = 25; // Threshold value to detect walls by the diagonal sensors while moving straight.
 
-int leftWallOffset = 100;
+int leftWallOffset = 180;
 int rightWallOffset = 50;
 
 float leftTurnSense = 9;
@@ -133,7 +133,7 @@ float rightTurnSense = 9;
 //////////////////////////////////////////////////////////////////////
 // move straight PD parameter(s)
 //////////////////////////////////////////////////////////////////////
-#define kp_move 0.85
+#define kp_move 1.2
 #define kd_move 1.5
 #define BASESPEED_move 100
 #define MAXSPEED_move BASESPEED_move+20
