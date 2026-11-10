@@ -5,6 +5,11 @@ Open [MAZESOLVER_TUNING.ino](MAZESOLVER_TUNING.ino) and select
 [config/config_esp32_dev.h](config/config_esp32_dev.h), then upload. The front
 APDS is on CH6.
 
+Set `APDS_PROXIMITY_GAIN` in that config to 1, 2, 4, or 8. It applies to the
+left, right, and front APDS sensors. Tuning currently uses 2×; the separate
+main firmware still uses 4×. Higher gain raises proximity counts for a given
+target but can saturate at 255. Recheck wall thresholds after changing it.
+
 Open Serial Monitor at **115200 baud**. Lift the wheels for the first startup
 check. Show your hand to the left APDS, remove it, and let the gyro calibrate
 while the robot is still. Show your hand to the right APDS to start.

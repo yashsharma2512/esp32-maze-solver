@@ -41,7 +41,11 @@ void initAPDS(uint8_t channel) {
   delay(20);
   writeRegister(APDS9960_REG_ENABLE, 0x00);
   writeRegister(APDS9960_REG_CONFIG2, 0x31);
-  writeRegister(APDS9960_REG_CONTROL, 0x49);
+  // Keep the existing 50 mA LED drive and 4x ALS gain; change only proximity gain.
+  const uint8_t gainCode = APDS_PROXIMITY_GAIN == 1 ? 0 :
+                           APDS_PROXIMITY_GAIN == 2 ? 1 :
+                           APDS_PROXIMITY_GAIN == 4 ? 2 : 3;
+  writeRegister(APDS9960_REG_CONTROL, 0x41 | (gainCode << 2));
   writeRegister(APDS9960_REG_COUNTR, 0x87);
   writeRegister(APDS9960_REG_ENABLE, 0x01);
   delay(10);

@@ -9,6 +9,7 @@ complete maze routine.
 
 | Setting | What it controls |
 | --- | --- |
+| `APDS_PROXIMITY_GAIN` | APDS proximity sensitivity (1×, 2×, 4×, or 8×); currently 4× in the main sketch |
 | `leftWallOffset` | Filtered APDS target while following one wall |
 | `wallSense` | Side sensor cutoff for straight steering |
 | `kp_move`, `kd_move` | Straight steering gains |
