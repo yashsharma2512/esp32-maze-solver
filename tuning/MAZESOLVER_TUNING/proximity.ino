@@ -100,6 +100,7 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
 
 void waitForUserInput1() {
   while (1) {
+    if (FLOW_TEST_STAGE == 4) checkColorCalibration();
     updateProximitySensors();
     mpu.update();
     if (dl > 150)

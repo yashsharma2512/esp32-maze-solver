@@ -25,7 +25,7 @@ sketch uses this helper in the public section of the library's
 
     void resetAngleZ() { angleZ = 0; }
 
-The main sketch also uses **Adafruit AS7341** and **Adafruit BusIO**.
+The main sketch and tuning stage 4 also use **Adafruit AS7341** and **Adafruit BusIO**.
 
 ## Wiring
 

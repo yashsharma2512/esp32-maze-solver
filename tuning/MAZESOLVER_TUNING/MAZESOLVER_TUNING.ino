@@ -61,6 +61,7 @@ void setup() {
   initAPDS(FL);
   initAPDS(DL);
   initAPDS(DR);
+  if (FLOW_TEST_STAGE == 4) setupColorSensor();
 
   while (0) {
     updateProximitySensors();
