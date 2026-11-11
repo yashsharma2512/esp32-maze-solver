@@ -13,6 +13,9 @@ For stage-by-stage testing, open the separate
 [MAZESOLVER_TUNING.ino sketch](tuning/MAZESOLVER_TUNING/MAZESOLVER_TUNING.ino).
 Choose stages 1–4 in its own config file. [Flow-tuning guide](tuning/MAZESOLVER_TUNING/README.md)
 
+For BLE serial and the `start` command, open the separate BLE sketch.
+[BLE setup and commands](ble/MAZESOLVER_BLE/README.md)
+
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
 set distance using both encoders and shows their counts and calculated travel.
