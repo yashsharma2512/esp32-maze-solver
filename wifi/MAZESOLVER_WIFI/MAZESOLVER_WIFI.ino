@@ -1,7 +1,6 @@
 #include "header.h"
 
 bool IR_CALIBRATE = false;
-bool AI_ENABLE = true;
 
 void setup() {
   /* Initialize Serial module */
@@ -67,6 +66,7 @@ void setup() {
 
   showColor(strip.Color(0, 0, 100));
   SerialDebug.println("Show a hand to the left APDS or send start with a newline.");
+  SerialDebug.println("Send camera to check the Nicla Vision link before starting.");
   const bool serialStart = waitForUserInput1();
 
   showColor(strip.Color(0, 100, 100));

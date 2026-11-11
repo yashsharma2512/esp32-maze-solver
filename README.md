@@ -18,6 +18,7 @@ For BLE serial and the `start` command, open the separate BLE sketch.
 
 The Wi-Fi sketch hosts a browser console in AP+STA mode and accepts OTA
 uploads during startup. [Wi-Fi setup and OTA](wifi/MAZESOLVER_WIFI/README.md)
+For the victim camera, use the [Nicla Vision setup](vision/NiclaVision/README.md).
 
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a

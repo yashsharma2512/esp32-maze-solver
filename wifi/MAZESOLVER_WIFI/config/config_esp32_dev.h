@@ -2,6 +2,7 @@
 constexpr int FRONT_WALL_THRESHOLD = 100;
 constexpr int OPENING_ADVANCE_MM = 200;
 constexpr int TURN_BACKUP_MM = 30;
+constexpr bool CAMERA_VICTIM_ACTIONS = true; // Set false for a maze run with camera actions disabled.
 
 //////////////////////////////////////////////////////////////////////
 // Select a maze solving algorithm. Select only one, comment the rest

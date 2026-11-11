@@ -61,12 +61,7 @@ void wallFollow(int wallToFollow) {
   updateProximitySensors();
   if (handleFloorColor()) return;
 
-  //AI stuff
-  // if (AI_ENABLE) {
-  //   readSerial();
-  //   interpretSerial();
-  // }
-  victimDetection();
+  if (CAMERA_VICTIM_ACTIONS) victimDetection();
 
   //IR
   // interpretIR(false);

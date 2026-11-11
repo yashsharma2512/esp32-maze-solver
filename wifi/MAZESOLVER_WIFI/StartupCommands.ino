@@ -1,6 +1,6 @@
 // Startup commands use separate line buffers for USB and the browser console.
 class StartupCommandInput {
-  char line[sizeof("start")];
+  char line[sizeof("camera")];
   size_t length = 0;
   bool tooLong = false;
 
@@ -9,15 +9,18 @@ public:
     while (true) {
       const int key = fromNetwork ? SerialDebug.readNetwork() : Serial.read();
       if (key < 0) break;
-      if (allowColorCalibration && length == 0 && !tooLong && (key == 'c' || key == 'C')) {
-        runColorCalibration(fromNetwork);
-        return false;
-      }
       if (key == '\r' || key == '\n') {
         line[length] = '\0';
         const bool start = !tooLong && strcmp(line, "start") == 0;
+        const bool calibrate = allowColorCalibration && !tooLong && length == 1 &&
+                               (line[0] == 'c' || line[0] == 'C');
+        if (!tooLong && strcmp(line, "camera") == 0) printCameraStatus();
         length = 0;
         tooLong = false;
+        if (calibrate) {
+          runColorCalibration(fromNetwork);
+          return false;
+        }
         if (start) return true;
       } else if (length + 1 < sizeof(line)) {
         line[length++] = char(key);
@@ -30,6 +33,7 @@ public:
 };
 
 bool checkStartupInput(bool allowColorCalibration) {
+  readSerial();
   SerialDebug.handleOta();
   static StartupCommandInput usb;
   static StartupCommandInput web;

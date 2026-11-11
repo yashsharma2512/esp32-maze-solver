@@ -1,189 +1,146 @@
+#include <errno.h>
+
+// The Nicla sends one line per frame: type,stable_ms,x,y.
+static constexpr unsigned long CAMERA_TIMEOUT_MS = 200;
+static constexpr int CAMERA_FRAME_SIZE = 160;
+static constexpr int NO_VICTIM = -1;
+
+static char cameraLine[32];
+static size_t cameraLineLength = 0;
+static bool cameraLineTooLong = false;
+static bool cameraPacketReceived = false;
+static unsigned long lastCameraRead = 0;
+static unsigned long lastCameraPacket = 0;
+static int victimType = NO_VICTIM;
+static unsigned long elapsedTime = 0;
+static int victimX = -1;
+static int victimY = -1;
+static bool victimHandled = false;
+
+static void interpretCameraLine(const char *line) {
+  long values[4];
+  for (size_t field = 0; field < 4; ++field) {
+    char *end;
+    errno = 0;
+    values[field] = strtol(line, &end, 10);
+    if (end == line || errno == ERANGE) return;
+    if (*end != (field == 3 ? '\0' : ',')) return;
+    line = end + 1;
+  }
+
+  const long type = values[0];
+  const long age = values[1];
+  const long x = values[2];
+  const long y = values[3];
+  if (type == NO_VICTIM) {
+    if (age != 0 || x != -1 || y != -1) return;
+    victimHandled = false;
+  } else if (type < 0 || type > 2 || age < 0 ||
+             x < 0 || x >= CAMERA_FRAME_SIZE || y < 0 || y >= CAMERA_FRAME_SIZE) {
+    return;
+  }
+
+  victimType = type;
+  elapsedTime = age;
+  victimX = x;
+  victimY = y;
+  lastCameraPacket = millis();
+  cameraPacketReceived = true;
+}
+
 void readSerial() {
-  while (Serial1.available()) {
-    char inChar = (char)Serial1.read();
-    if (inChar == '\n') {
-      stringComplete = true;
-    } else inputString += inChar;
+  const unsigned long now = millis();
+  if (now - lastCameraRead > CAMERA_TIMEOUT_MS) {
+    // Discard queued data after a long turn or other gap in polling.
+    while (Serial1.read() >= 0) {}
+    cameraLineLength = 0;
+    cameraLineTooLong = false;
   }
-}
+  lastCameraRead = now;
 
-
-void interpretSerial() {
-
-  if (stringComplete) {
-
-    // Remove whitespace / newline
-    inputString.trim();
-
-    // ---------------------------------------------------
-    // Find commas
-    // ---------------------------------------------------
-
-    int comma1 = inputString.indexOf(',');
-    int comma2 = inputString.indexOf(',', comma1 + 1);
-    int comma3 = inputString.indexOf(',', comma2 + 1);
-
-    if (comma1 >= 0 && comma2 >= 0 && comma3 >= 0) {
-
-      // -------------------------------------------------
-      // Extract values
-      // -------------------------------------------------
-
-      victimType = inputString.substring(0, comma1).toInt();
-
-      elapsedTime = inputString.substring(
-                                 comma1 + 1,
-                                 comma2)
-                      .toInt();
-
-      victimX = inputString.substring(
-                             comma2 + 1,
-                             comma3)
-                  .toInt();
-
-      victimY = inputString.substring(
-                             comma3 + 1)
-                  .toInt();
-
-
-      // -------------------------------------------------
-      // Interpret victim type
-      // -------------------------------------------------
-
-      switch (victimType) {
-
-        case 2:
-          victimStatus = "HARMED";
-          break;
-
-        case 1:
-          victimStatus = "UNHARMED";
-          break;
-
-        case 0:
-          victimStatus = "STABLE";
-          break;
-
-        default:
-          victimStatus = "FAKE";
-          break;
+  for (int byte = Serial1.read(); byte >= 0; byte = Serial1.read()) {
+    if (byte == '\r') continue;
+    if (byte == '\n') {
+      if (!cameraLineTooLong && cameraLineLength != 0) {
+        cameraLine[cameraLineLength] = '\0';
+        interpretCameraLine(cameraLine);
       }
-
-
-      // -------------------------------------------------
-      // Debug output
-      // -------------------------------------------------
-
-      // SerialDebug.print("Status: ");
-      // SerialDebug.print(victimStatus);
-
-      // SerialDebug.print("\tElapsed: ");
-      // SerialDebug.print(elapsedTime);
-
-      // SerialDebug.print("\tX: ");
-      // SerialDebug.print(victimX);
-
-      // SerialDebug.print("\tY: ");
-      // SerialDebug.println(victimY);
-
-    } else {
-
-      // SerialDebug.print("Invalid data: ");
-      // SerialDebug.println(inputString);
+      cameraLineLength = 0;
+      cameraLineTooLong = false;
+    } else if (byte < 32 || byte > 126 || cameraLineLength == sizeof(cameraLine) - 1) {
+      cameraLineTooLong = true;
+    } else if (!cameraLineTooLong) {
+      cameraLine[cameraLineLength++] = char(byte);
     }
-
-
-    // ---------------------------------------------------
-    // Clear the string
-    // ---------------------------------------------------
-
-    inputString = "";
-    stringComplete = false;
   }
 }
 
+static bool cameraLinkActive() {
+  return cameraPacketReceived && millis() - lastCameraPacket <= CAMERA_TIMEOUT_MS;
+}
 
+static const char *cameraVictimName() {
+  switch (victimType) {
+    case 2: return "HARMED";
+    case 1: return "UNHARMED";
+    case 0: return "STABLE";
+    default: return "no target";
+  }
+}
+
+void printCameraStatus() {
+  if (!cameraLinkActive()) {
+    SerialDebug.println("Camera: no recent Nicla packet. Check power, UART and ground.");
+    return;
+  }
+  if (victimType == NO_VICTIM) {
+    SerialDebug.println("Camera: linked, no target.");
+    return;
+  }
+  SerialDebug.printf("Camera: %s | x=%d y=%d | stable %lu ms\n",
+                     cameraVictimName(), victimX, victimY, elapsedTime);
+}
 
 void victimDetection() {
-
   readSerial();
-  interpretSerial();
-  unsigned long lastelapsed = elapsedTime;
-  unsigned long _t = millis();
+  if (!cameraLinkActive() || victimType == NO_VICTIM || victimHandled || elapsedTime <= 5) return;
 
-  if (elapsedTime > 5) {
-    if (victimType == 2 or victimType == 1 or victimType == 0) {
+  // Keep the original approach and victim indication.
+  moveMotor(0, 0);
+  while (true) {
+    mpu.update();
+    updateProximitySensors();
+    readSerial();
+    if (!cameraLinkActive() || victimType == NO_VICTIM) {
       moveMotor(0, 0);
-      while (true) {
-        mpu.update();
-        updateProximitySensors();
-        readSerial();
-        interpretSerial();
-        if (elapsedTime != lastelapsed) {
-          lastelapsed = elapsedTime;
-          _t = millis();
-        }
-
-        if (millis() - _t > 200) {
-          SerialDebug.println("break");
-          elapsedTime = 0;
-          victimType = -1;
-          victimX = -1;
-          victimY = -1;
-          break;
-        }
-
-        moveMotor(-45, -45);
-
-        if (victimX > 70) {
-          moveMotor(0, 0);
-          SerialDebug.print("FOUND: \t");
-          // delay(2000);
-          if (elapsedTime > 500) {
-            SerialDebug.print("found victim: ");
-            SerialDebug.println(victimStatus);
-            SerialDebug.println("Waiting 5 sec....");
-            ;
-
-            uint32_t _clr = strip.Color(10, 10, 10);
-            if (victimType == 2)
-              _clr = strip.Color(100, 0, 0);
-            else if (victimType == 1)
-              _clr = strip.Color(100, 50, 0);
-            else if (victimType == 0)
-              _clr = strip.Color(0, 100, 0);
-
-            for (int i = 0; i < 5; i++) {
-              showColor(_clr);
-              delayWithSensorUpdate(500);
-              strip.clear();
-              strip.show();
-              delayWithSensorUpdate(500);
-            }
-
-            moveMotor(100, 100);
-            delayWithSensorUpdate(500);
-
-            elapsedTime = 0;
-            victimType = -1;
-            victimX = -1;
-            victimY = -1;
-            break;
-          }
-        }
-
-        SerialDebug.print("Status: ");
-        SerialDebug.print(victimStatus);
-
-        SerialDebug.print("\tElapsed: ");
-        SerialDebug.print(elapsedTime);
-
-        SerialDebug.print("\tX: ");
-        SerialDebug.print(victimX);
-
-        SerialDebug.print("\tY: ");
-        SerialDebug.println(victimY);
-      }
+      return;
     }
+
+    if (victimX <= 70) {
+      moveMotor(-45, -45);
+      continue;
+    }
+
+    moveMotor(0, 0);
+    if (elapsedTime <= 500) continue;
+
+    SerialDebug.printf("Found victim: %s\n", cameraVictimName());
+    SerialDebug.println("Waiting 5 sec...");
+    uint32_t color = strip.Color(0, 100, 0);
+    if (victimType == 2) color = strip.Color(100, 0, 0);
+    if (victimType == 1) color = strip.Color(100, 50, 0);
+
+    victimHandled = true;
+    for (int flash = 0; flash < 5; ++flash) {
+      showColor(color);
+      delayWithSensorUpdate(500);
+      strip.clear();
+      strip.show();
+      delayWithSensorUpdate(500);
+    }
+
+    moveMotor(100, 100);
+    delayWithSensorUpdate(500);
+    return;
   }
 }

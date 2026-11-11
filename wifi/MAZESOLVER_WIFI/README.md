@@ -30,6 +30,9 @@ it, or send `start` from the terminal.
 USB Serial Monitor accepts the same commands at **115200 baud** with
 **Newline** selected. Use the motor power switch to stop a run.
 
+Send `camera` from either console before `start` to check the Nicla UART
+and the current victim classification. [Nicla Vision wiring and setup](https://github.com/yashsharma2512/esp32-maze-solver/tree/main/vision/NiclaVision)
+
 ## Upload updates over Wi-Fi
 
 Reset the robot and leave it at the startup prompt with the motors in

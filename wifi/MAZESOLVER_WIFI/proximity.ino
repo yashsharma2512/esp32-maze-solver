@@ -97,7 +97,6 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
     mpu.update();
     updateProximitySensors();
     readSerial();
-    interpretSerial();
   }
 }
 

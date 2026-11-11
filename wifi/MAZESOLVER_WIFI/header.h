@@ -34,23 +34,6 @@ unsigned long _tick = 0;
 
 bool state = false;
 
-String inputString = "";      // a String to hold incoming data
-bool stringComplete = false;  // whether the string is complete
-
-
-// =========================================================
-// VICTIM HANDLING
-// =========================================================
-
-int victimType;
-unsigned long elapsedTime;
-int victimX;
-int victimY;
-
-bool victimProcessing = false;
-
-String victimStatus;
-
 MPU6050 mpu(Wire);
 
 // APDS9960 I2C address
