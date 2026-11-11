@@ -59,6 +59,7 @@ void printCoordinates(bool lw, bool rw) {
 void wallFollow(int wallToFollow) {
   mpu.update();
   updateProximitySensors();
+  if (handleFloorColor()) return;
 
   //AI stuff
   // if (AI_ENABLE) {
@@ -89,19 +90,19 @@ void wallFollow(int wallToFollow) {
       if (_turn == -1 and wallToFollow == LEFT)
       {
         SerialDebug.println("LEFT");
-        MoveStrightToDistance(OPENING_ADVANCE_MM);
+        if (!MoveStrightToDistance(OPENING_ADVANCE_MM)) return;
         delayWithSensorUpdate(100);
         turnBot(85, LEFT, false);
         delay(100);
-        MoveStrightToDistance(-TURN_BACKUP_MM);
+        if (!MoveStrightToDistance(-TURN_BACKUP_MM)) return;
         delay(100);
       } else if (_turn == 1 and wallToFollow == RIGHT) {
         SerialDebug.println("RIGHT");
-        MoveStrightToDistance(OPENING_ADVANCE_MM);
+        if (!MoveStrightToDistance(OPENING_ADVANCE_MM)) return;
         delayWithSensorUpdate(100);
         turnBot(90, RIGHT, false);
         delay(100);
-        MoveStrightToDistance(-TURN_BACKUP_MM);
+        if (!MoveStrightToDistance(-TURN_BACKUP_MM)) return;
         delay(100);
       }
       for (int i = 0; i < 10; i++) {

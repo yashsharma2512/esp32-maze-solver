@@ -108,6 +108,7 @@ void setup() {
     waitForUserInput2();
   }
 
+  startFloorDetection();
   showColor(strip.Color(0, 50, 0));
 
   SerialDebug.println("START2");

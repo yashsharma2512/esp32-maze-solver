@@ -55,3 +55,22 @@ sketch turns on its illumination LED at 4 mA during setup.
 
 Use the actual floor material at a consistent height for calibration and
 comparison. The closest match is based on the raw band counts.
+
+## Floor tiles while solving
+
+Before starting, use `c` and save the real tiles under the mounted sensor
+with `save black`, `save blue`, and `save silver`. Also save ordinary
+floor with `save floor`. An existing `white` reference works as the
+ordinary floor reference if it represents the course surface. References
+already saved under those names are loaded when a run starts.
+
+| Tile | Action |
+| --- | --- |
+| Black | Stop, pivot 180° using two existing left turns, and resume solving. |
+| Blue | Stop for five seconds, flash the NeoPixels blue, and resume. |
+| Silver | Flash the NeoPixels white while continuing to solve. |
+
+Use `read` to check the `Driving match` result before starting. The robot
+requires two consecutive confident readings before it reacts and waits for a
+different confirmed surface before reacting to that color again.
+Unknown readings and sensor read errors leave the current maneuver alone.

@@ -143,16 +143,9 @@ void listColorReferences() {
 }
 
 // 4. Compare the current sample with each saved set of ten readings.
-void matchColorReference() {
-  uint16_t sample[COLOR_BAND_COUNT];
-  if (!captureColorAverage(sample)) return;
-  SerialDebug.print("AS7341 F1..F8, Clear, NIR:");
-  for (uint16_t band : sample) SerialDebug.printf(" %u", unsigned(band));
-  SerialDebug.println();
-  if (!colorStorageReady) return;
-
+int closestColorReference(const uint16_t *sample, float &bestScore, float &secondScore) {
   int closest = -1;
-  float bestScore = 0;
+  bestScore = secondScore = INFINITY;
   for (size_t i = 0; i < MAX_COLOR_REFERENCES; ++i) {
     const ColorReference &reference = colorTable.references[i];
     if (reference.name[0] == '\0') continue;
@@ -161,13 +154,61 @@ void matchColorReference() {
       const float difference = float(sample[band]) - reference.bands[band];
       score += difference * difference;
     }
-    if (closest < 0 || score < bestScore) {
+    if (score < bestScore) {
+      secondScore = bestScore;
       closest = int(i);
       bestScore = score;
+    } else if (score < secondScore) {
+      secondScore = score;
     }
   }
+  return closest;
+}
+
+const char *matchFloorColor(const uint16_t *sample) {
+  float bestScore, secondScore;
+  const int closest = closestColorReference(sample, bestScore, secondScore);
+  if (closest < 0) return nullptr;
+  const char *name = colorTable.references[closest].name;
+  const bool action = strcmp(name, "black") == 0 || strcmp(name, "blue") == 0 ||
+                      strcmp(name, "silver") == 0;
+  if (action && secondScore <= 1.5f * bestScore) return nullptr;
+
+  // Keep brightness in the comparison so black and silver remain distinct.
+  float referenceEnergy = 0;
+  for (uint16_t band : colorTable.references[closest].bands) {
+    referenceEnergy += float(band) * band;
+  }
+  const float tolerance = FLOOR_COLOR_MATCH_TOLERANCE * FLOOR_COLOR_MATCH_TOLERANCE;
+  if (bestScore > tolerance * max(referenceEnergy, 100.0f)) return nullptr;
+  return action ? name : "floor";
+}
+
+void matchColorReference() {
+  uint16_t sample[COLOR_BAND_COUNT];
+  if (!captureColorAverage(sample)) return;
+  SerialDebug.print("AS7341 F1..F8, Clear, NIR:");
+  for (uint16_t band : sample) SerialDebug.printf(" %u", unsigned(band));
+  SerialDebug.println();
+  if (!colorStorageReady) return;
+
+  float bestScore, secondScore;
+  const int closest = closestColorReference(sample, bestScore, secondScore);
   if (closest < 0) SerialDebug.println("COLOR: save a reference first.");
-  else SerialDebug.printf("Closest saved color: %s\n", colorTable.references[closest].name);
+  else {
+    SerialDebug.printf("Closest saved color: %s\n", colorTable.references[closest].name);
+    const char *tile = matchFloorColor(sample);
+    SerialDebug.printf("Driving match: %s\n", tile ? tile : "unknown");
+  }
+}
+
+bool loadFloorColorReferences() {
+  if (!colorStorageReady) loadColorReferences();
+  if (!colorStorageReady) return false;
+  const bool hasFloor = findColorReference("floor") >= 0 || findColorReference("white") >= 0;
+  const bool hasTile = findColorReference("black") >= 0 || findColorReference("blue") >= 0 ||
+                       findColorReference("silver") >= 0;
+  return hasFloor && hasTile;
 }
 
 // 5. Read a full command before handling it.

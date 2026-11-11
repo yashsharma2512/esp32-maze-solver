@@ -253,7 +253,7 @@ void moveStraightAligned() {
 //   delay(30);
 // }
 
-void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
+bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redirects the robot.
   int direction = 1;
   if (distance_mm < 0) direction = -1;
   distance_mm = abs(distance_mm);
@@ -267,6 +267,7 @@ void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
   while (1) {
     mpu.update();
     updateProximitySensors();
+    if (handleFloorColor()) return false;
     float lft = abs(encLeft.getAngle());
     float rht = abs(encRight.getAngle());
     float err = requiredDegrees - (lft + rht) / 2;// add gyro assist
@@ -280,6 +281,7 @@ void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
     delay(5);
   }
   moveMotor(0, 0);
+  return true;
 }
 
 void interpretClicks() {

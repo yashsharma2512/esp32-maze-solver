@@ -43,6 +43,7 @@ float rightTurnSense = 9;
 #define DL 0 // Left APDS on TCA CH0
 #define DR 1 // Right APDS on TCA CH1
 constexpr uint8_t COLOR_CH = 2; // Bottom-facing AS7341 on TCA CH2
+constexpr float FLOOR_COLOR_MATCH_TOLERANCE = 0.30f;
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////
