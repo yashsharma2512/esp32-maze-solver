@@ -18,10 +18,19 @@ constexpr char MAZE_WIFI_SSID[] = "";
 constexpr char MAZE_WIFI_PASSWORD[] = "";
 #endif
 
+#ifndef MAZE_ACCESS_PASSWORD
+#define MAZE_ACCESS_PASSWORD ""
+#endif
+
 namespace {
 constexpr char AP_NAME[] = "MazeSolver";
 constexpr char HOSTNAME[] = "mazesolver";
 constexpr char WEB_USER[] = "maze";
+constexpr char FIXED_PASSWORD[] = MAZE_ACCESS_PASSWORD;
+constexpr size_t FIXED_PASSWORD_LENGTH = sizeof(FIXED_PASSWORD) - 1;
+static_assert(FIXED_PASSWORD_LENGTH == 0 ||
+              (FIXED_PASSWORD_LENGTH >= 8 && FIXED_PASSWORD_LENGTH <= 63),
+              "MAZE_ACCESS_PASSWORD must be empty or 8 to 63 characters.");
 constexpr char COMMAND_HEADER[] = "X-Maze-Console";
 constexpr size_t LOG_CAPACITY = 4096;
 
@@ -29,26 +38,30 @@ WebServer server(80);
 QueueHandle_t commands = nullptr;
 std::atomic<bool> startupOpen{false};
 bool otaOpen = false;
-char password[13];
+const char *password = nullptr;
 
 portMUX_TYPE logLock = portMUX_INITIALIZER_UNLOCKED;
 char logBytes[LOG_CAPACITY];
 uint32_t logNext = 0;
 size_t logSize = 0;
 
-void loadPassword() {
+const char *loadPassword() {
+  if (FIXED_PASSWORD_LENGTH != 0) return FIXED_PASSWORD;
+
+  static char generatedPassword[13];
   Preferences settings;
   const bool opened = settings.begin("maze_wifi", false);
   const String saved = opened ? settings.getString("pass") : String();
-  if (saved.length() == sizeof(password) - 1) {
-    saved.toCharArray(password, sizeof(password));
+  if (saved.length() == sizeof(generatedPassword) - 1) {
+    saved.toCharArray(generatedPassword, sizeof(generatedPassword));
   } else {
-    snprintf(password, sizeof(password), "%08lx%04lx",
+    snprintf(generatedPassword, sizeof(generatedPassword), "%08lx%04lx",
              static_cast<unsigned long>(esp_random()),
              static_cast<unsigned long>(esp_random() & 0xffff));
-    if (opened) settings.putString("pass", password);
+    if (opened) settings.putString("pass", generatedPassword);
   }
   if (opened) settings.end();
+  return generatedPassword;
 }
 
 bool authenticateConsole() {
@@ -130,7 +143,7 @@ void WifiSerialConsole::begin() {
     Serial.println("Wi-Fi mode unavailable.");
     return;
   }
-  loadPassword();
+  password = loadPassword();
   const bool apStarted = WiFi.softAP(AP_NAME, password);
   if (MAZE_WIFI_SSID[0] != '\0') WiFi.begin(MAZE_WIFI_SSID, MAZE_WIFI_PASSWORD);
   if (!apStarted && MAZE_WIFI_SSID[0] == '\0') {
@@ -164,7 +177,11 @@ void WifiSerialConsole::begin() {
   if (apStarted) {
     SerialDebug.printf("Wi-Fi hotspot: %s | console: http://%s\n", AP_NAME, WiFi.softAPIP().toString().c_str());
   }
-  Serial.printf("Wi-Fi and OTA password: %s | console user: %s\n", password, WEB_USER);
+  if (FIXED_PASSWORD_LENGTH == 0) {
+    Serial.printf("Wi-Fi and OTA password: %s | console user: %s\n", password, WEB_USER);
+  } else {
+    Serial.printf("Using the password from WifiSecrets.h | console user: %s\n", WEB_USER);
+  }
   ArduinoOTA.setHostname(HOSTNAME);
   ArduinoOTA.setPassword(password);
   ArduinoOTA.onStart([] { SerialDebug.println("OTA upload started."); });

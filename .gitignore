@@ -10,5 +10,5 @@ build/
 .DS_Store
 Thumbs.db
 
-# Local router credentials for the Wi-Fi sketch
+# Local access and router credentials for the Wi-Fi sketch
 WifiSecrets.h
