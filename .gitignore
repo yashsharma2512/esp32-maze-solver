@@ -9,3 +9,6 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local router credentials for the Wi-Fi sketch
+WifiSecrets.h

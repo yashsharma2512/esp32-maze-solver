@@ -16,6 +16,9 @@ Choose stages 1–4 in its own config file. [Flow-tuning guide](tuning/MAZESOLVE
 For BLE serial and the `start` command, open the separate BLE sketch.
 [BLE setup and commands](ble/MAZESOLVER_BLE/README.md)
 
+The Wi-Fi sketch hosts a browser console in AP+STA mode and accepts OTA
+uploads during startup. [Wi-Fi setup and OTA](wifi/MAZESOLVER_WIFI/README.md)
+
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
 set distance using both encoders and shows their counts and calculated travel.
