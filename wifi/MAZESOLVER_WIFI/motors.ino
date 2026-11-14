@@ -16,6 +16,10 @@ void setMotorIOs() {
 
 void moveMotor(int inL, int inR) {
   if (motorStopRequested()) return;  // The driver is already in standby.
+  writeMotorOutputs(inL, inR);
+}
+
+void writeMotorOutputs(int inL, int inR) {
   inL = (float)inL * 0.985;
   int leftpwm = abs(inL);
   int rightpwm = abs(inR);

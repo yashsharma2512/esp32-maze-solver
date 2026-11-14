@@ -28,8 +28,8 @@ it, or send `start` from the terminal.
 USB Serial Monitor accepts the same commands at **115200 baud** with
 **Newline** selected. During a run, type `stop` in either console or press
 **Stop motors** in the browser. This disables motor drive through the
-TB6612 **STBY** pin on **GPIO33** and ends the run. The wheels can coast.
-Reset the ESP32 to start again. If the console is unreachable, use the
+TB6612 **STBY** pin on **GPIO33** and pauses the run. The wheels can coast.
+Send `start` to resume with a fresh wall check. If the console is unreachable, use the
 physical motor power switch.
 
 Send `camera` from either console before `start` to check the Nicla UART

@@ -50,7 +50,12 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
     const size_t length = characteristic->getLength();
     const uint8_t *data = characteristic->getData();
     for (size_t i = 0; i < length; ++i) {
-      if (stopCommand.read(data[i])) requestMotorStop();
+      const MotorCommand command = stopCommand.read(data[i]);
+      if (command == MotorCommand::Stop) {
+        requestMotorStop();
+        xQueueReset(incoming);
+      }
+      if (command == MotorCommand::Start) requestMotorResume();
     }
     if (motorStopRequested() || length > uxQueueSpacesAvailable(incoming)) return;
     for (size_t i = 0; i < length; ++i) xQueueSend(incoming, &data[i], 0);

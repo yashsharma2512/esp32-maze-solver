@@ -3,29 +3,35 @@
 #include <Arduino.h>
 
 // Each input keeps its own match so split USB/BLE packets form one command.
+enum class MotorCommand { None, Stop, Start };
+
 class StopCommand {
-  static constexpr char word[] = "stop";
+  static constexpr char stopWord[] = "stop";
+  static constexpr char startWord[] = "start";
+  bool matchesStop = true;
+  bool matchesStart = true;
   size_t matched = 0;
-  bool otherCommand = false;
+
 
 public:
   void reset() {
     matched = 0;
-    otherCommand = false;
+    matchesStop = true;
+    matchesStart = true;
   }
 
-  bool read(uint8_t byte) {
+  MotorCommand read(uint8_t byte) {
     if (byte == '\r' || byte == '\n') {
-      const bool stop = !otherCommand && matched == sizeof(word) - 1;
+      MotorCommand command = MotorCommand::None;
+      if (matchesStop && matched == sizeof(stopWord) - 1) command = MotorCommand::Stop;
+      if (matchesStart && matched == sizeof(startWord) - 1) command = MotorCommand::Start;
       reset();
-      return stop;
+      return command;
     }
-    if (!otherCommand && matched < sizeof(word) - 1 &&
-        (byte == word[matched] || byte == word[matched] - 'a' + 'A')) {
-      ++matched;
-    } else {
-      otherCommand = true;
-    }
-    return false;
+    if (byte >= 'A' && byte <= 'Z') byte += 'a' - 'A';
+    matchesStop = matchesStop && matched < sizeof(stopWord) - 1 && byte == stopWord[matched];
+    matchesStart = matchesStart && matched < sizeof(startWord) - 1 && byte == startWord[matched];
+    if (matched < sizeof(startWord)) ++matched;
+    return MotorCommand::None;
   }
 };

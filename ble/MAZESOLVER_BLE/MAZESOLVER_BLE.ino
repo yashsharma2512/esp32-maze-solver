@@ -68,8 +68,15 @@ void setup() {
 
   showColor(strip.Color(0, 0, 100));
   SerialDebug.println("Show a hand to the left APDS or send start with a newline.");
-  const bool serialStart = waitForUserInput1();
-  if (motorStopRequested()) return;
+  bool serialStart = waitForUserInput1();
+  // A stop during startup holds the robot here until start is received.
+  while (motorStopRequested()) {
+    if (takeMotorResumeRequest()) {
+      serialStart = true;
+      break;
+    }
+    delay(10);
+  }
 
   showColor(strip.Color(0, 100, 100));
 
@@ -118,8 +125,7 @@ void setup() {
   encoderPos = 0;
   enableISR();
 
-  if (!enableMotorDrive()) return;
-  SerialDebug.println("Start. Send stop to disable the motors.");
+  if (enableMotorDrive()) SerialDebug.println("Start. Send stop to pause.");
 
   while (0) {
     mpu.update();
@@ -132,17 +138,22 @@ void setup() {
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */
   // testRotation();
 
-  /* Run main algorithm
-  Note: function is blocking*/
-  // solveMaze();
-  while (!motorStopRequested()) {
-    // MoveStrightToDistance(500);
-    wallFollow(LEFT);
-    // delayWithSensorUpdate(500);
-  }
 }
 
 void loop() {
-  /* Nothing to do here */
-  delay(1);
+  if (motorStopRequested()) {
+    if (!motorResumeRequested()) {
+      delay(10);
+      return;
+    }
+    // Clear motor outputs and refresh steering while the driver is in standby.
+    writeMotorOutputs(0, 0);
+    updateWalls(false);
+    mpu.update();
+    mpu.resetAngleZ();
+    pe_move = 0;
+    if (!takeMotorResumeRequest() || !enableMotorDrive()) return;
+    SerialDebug.println("START: resuming maze run.");
+  }
+  wallFollow(LEFT);
 }

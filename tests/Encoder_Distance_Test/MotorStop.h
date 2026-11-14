@@ -5,3 +5,5 @@ bool enableMotorDrive();
 void requestMotorStop();
 void beginMotorStop();
 int readUsbCommand();
+bool requestMotorResume();
+bool takeMotorResumeRequest();

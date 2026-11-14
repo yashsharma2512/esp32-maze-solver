@@ -55,7 +55,11 @@ void readUsbCommands() {
       line[length] = '\0';
       if (!tooLong && strcasecmp(line, "stop") == 0) {
         requestMotorStop();
-      } else if (!tooLong && length != 0 && uxQueueSpacesAvailable(usbCommands) >= length + 1) {
+        xQueueReset(usbCommands);
+      } else if (!tooLong && strcasecmp(line, "start") == 0 && requestMotorResume()) {
+        // The motor loop handles resuming.
+      } else if (!motorStopRequested() && !tooLong && length != 0 &&
+                 uxQueueSpacesAvailable(usbCommands) >= length + 1) {
         line[length++] = '\n';
         for (size_t index = 0; index < length; ++index) xQueueSend(usbCommands, &line[index], 0);
       }
@@ -96,11 +100,16 @@ void receiveCommand() {
   command.trim();
   if (command.equalsIgnoreCase("stop")) {
     requestMotorStop();
-    server.send(200, "text/plain", "Motor drive disabled. Reset the ESP32 to start a new run.");
+    xQueueReset(commands);
+    server.send(200, "text/plain", "Motor drive paused. Send start to resume.");
+    return;
+  }
+  if (command.equalsIgnoreCase("start") && requestMotorResume()) {
+    server.send(202, "text/plain", "Resume requested.");
     return;
   }
   if (!startupOpen.load() || motorStopRequested()) {
-    server.send(409, "text/plain", "Reset the ESP32 to use startup commands.");
+    server.send(409, "text/plain", "Startup commands are unavailable during a run. Use stop or start to control motion.");
     return;
   }
   if (command.length() == 0 || command.length() > 39) {

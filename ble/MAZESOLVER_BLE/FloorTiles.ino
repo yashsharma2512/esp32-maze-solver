@@ -54,6 +54,10 @@ bool handleFloorColor() {
     turnBot(90, LEFT);
     delayWithSensorUpdate(100);
     turnBot(90, LEFT);
+    if (motorStopRequested()) {
+      lastTile = nullptr;
+      return true;
+    }
     updateWalls(false);
     pe_move = 0;
     return true;

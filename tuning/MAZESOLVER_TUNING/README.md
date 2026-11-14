@@ -22,8 +22,8 @@ Wi-Fi, and BLE configs when moving from tuning to a full run.
 Open Serial Monitor at **115200 baud**. Lift the wheels for the first startup
 check. Show your hand to the left APDS, remove it, and let the gyro calibrate
 while the robot is still. Show your hand to the right APDS to start.
-Send `stop` with **Newline** selected to disable motor drive. Reset the
-ESP32 to run the stage again.
+Send `stop` with **Newline** selected to pause motor drive. Send `start` to
+resume with a fresh wall check.
 
 Stage 4 also initializes the bottom-facing AS7341 on TCA CH2 and enables its
 illumination LED at 4 mA. Before the first hand gesture, send `c` to calibrate

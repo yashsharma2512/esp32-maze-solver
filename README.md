@@ -60,9 +60,9 @@ For the Adafruit AS7341 breakout, connect VIN to 3.3 V.
 Open Serial Monitor at **115200 baud**. Lift the wheels for the first test.
 Show a hand to the left APDS and remove it. Keep the robot still until
 `MPU calibrated.` appears. Then show a hand to the right APDS and remove it
-to start. Send `stop` over USB Serial with **Newline** selected to disable
-motor drive. Reset the ESP32 to start a new run. The BLE and Wi-Fi sketches
-also accept `stop` over their wireless consoles.
+to start. Send `stop` over USB Serial with **Newline** selected to pause
+motor drive. Send `start` to resume from the current position. The BLE
+and Wi-Fi sketches also accept both commands over their wireless consoles.
 
 ## Floor color calibration
 

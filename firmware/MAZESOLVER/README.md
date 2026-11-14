@@ -19,8 +19,8 @@ complete maze routine.
 | `OPENING_ADVANCE_MM` | Forward distance before turning into a side opening |
 | `TURN_BACKUP_MM` | Backup distance after a single turn |
 
-To stop a run, send `stop` at **115200 baud** with **Newline** selected.
-Reset the ESP32 to run again.
+To pause a run, send `stop` at **115200 baud** with **Newline** selected.
+Send `start` to resume with a fresh wall check.
 
 ## Floor color calibration
 

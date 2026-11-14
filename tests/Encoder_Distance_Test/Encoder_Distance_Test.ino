@@ -37,6 +37,8 @@ Encoder leftEnc = {"LEFT", LEFT_CH, 0, -1, 0, 0, 0, 0, false};
 Encoder rightEnc = {"RIGHT", RIGHT_CH, 0, -1, 0, 0, 0, 0, false};
 
 bool busReady = false, moving = false;
+bool pausedMove = false;
+float leftProgressStart = 0, rightProgressStart = 0;
 int moveDirection = 1, leftPWM = 0, rightPWM = 0;
 uint32_t moveStartMs = 0, lastSampleMs = 0, lastPrintMs = 0;
 const char *lastStopReason = "none";
@@ -179,6 +181,7 @@ void startMove(int direction) {
   rightEnc.previousRaw = rightEnc.raw;
   moveDirection = direction;
   moveStartMs = millis();
+  leftProgressStart = rightProgressStart = 0;
   lastStopReason = "none";
   moving = true;
   Serial.printf("START %s: target %.1f mm = %.0f counts per wheel\n",
@@ -186,10 +189,29 @@ void startMove(int direction) {
                 TARGET_COUNTS);
 }
 
+void resumeMove() {
+  if (!pausedMove) {
+    Serial.println("Ready. Send g or b to begin a move.");
+    return;
+  }
+  pausedMove = false;
+  if (!readBoth() || !goodMagnet(leftEnc) || !goodMagnet(rightEnc)) {
+    lastStopReason = "encoder unavailable at resume";
+    Serial.println("RESUME BLOCKED: check the encoders, then send g or b for a new move.");
+    return;
+  }
+  leftProgressStart = wheelMM(leftEnc);
+  rightProgressStart = wheelMM(rightEnc);
+  moveStartMs = millis();
+  moving = true;
+  lastStopReason = "none";
+  Serial.println("START: resuming distance test.");
+}
+
 void printStatus() {
   float lmm = wheelMM(leftEnc), rmm = wheelMM(rightEnc);
   Serial.printf("%s L=%ld counts %.1f mm (%s) R=%ld counts %.1f mm (%s) avg=%.1f/%.1f mm PWM=%d,%d last_stop=%s\n",
-                moving ? "MOVE" : "IDLE", long(leftEnc.totalCounts), lmm,
+                moving ? "MOVE" : motorStopRequested() ? "PAUSED" : "IDLE", long(leftEnc.totalCounts), lmm,
                 magnetLabel(leftEnc), long(rightEnc.totalCounts), rmm,
                 magnetLabel(rightEnc), (lmm + rmm) * 0.5f,
                 TEST_DISTANCE_MM, leftPWM, rightPWM, lastStopReason);
@@ -206,7 +228,7 @@ void setup() {
                 WHEEL_CIRCUMFERENCE_MM, TARGET_COUNTS);
   Serial.printf("LEFT=TCA CH%u RIGHT=TCA CH%u. g=forward, b=reverse, x=stop.\n",
                 LEFT_CH, RIGHT_CH);
-  Serial.println("Send stop with Newline to disable motor drive until reset.");
+  Serial.println("Send stop to pause and start to resume, both with Newline.");
   Serial.println("Motors will not start until g or b is sent. Lift wheels for first check.");
   Wire.begin(SDA_PIN, SCL_PIN, 100000);
   Wire.setTimeOut(50);
@@ -223,7 +245,13 @@ void loop() {
     else if (c == 'g' || c == 'G') startMove(1);
     else if (c == 'b' || c == 'B') startMove(-1);
   }
-  if (motorStopRequested() && moving) stopMove("user command");
+  if (motorStopRequested()) {
+    if (moving) {
+      pausedMove = true;
+      stopMove("paused by user");
+    }
+    if (takeMotorResumeRequest()) resumeMove();
+  }
 
   uint32_t now = millis();
   if (moving && now - moveStartMs > MAX_MOVE_MS) stopMove("encoder timeout");
@@ -239,7 +267,8 @@ void loop() {
         float avgMM = (lmm + rmm) * 0.5f;
         if (avgMM >= TEST_DISTANCE_MM) {
           stopMove("target reached");
-        } else if (now - moveStartMs > 1500 && (lmm < 3.0f || rmm < 3.0f)) {
+        } else if (now - moveStartMs > 1500 &&
+                   (lmm - leftProgressStart < 3.0f || rmm - rightProgressStart < 3.0f)) {
           stopMove("wheel or encoder stalled");
         } else if (avgMM > 50.0f && fabsf(lmm - rmm) > 60.0f) {
           stopMove("wheel distance mismatch");
