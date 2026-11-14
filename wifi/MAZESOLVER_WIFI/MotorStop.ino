@@ -5,6 +5,7 @@
 static portMUX_TYPE motorStopLock = portMUX_INITIALIZER_UNLOCKED;
 static bool stopLatched = false;
 static bool resumePending = false;
+static bool resetPending = false;
 
 bool motorStopRequested() {
   portENTER_CRITICAL(&motorStopLock);
@@ -30,7 +31,7 @@ bool motorResumeRequested() {
 
 bool requestMotorResume() {
   portENTER_CRITICAL(&motorStopLock);
-  const bool paused = stopLatched;
+  const bool paused = stopLatched && !resetPending;
   if (paused) resumePending = true;
   portEXIT_CRITICAL(&motorStopLock);
   return paused;
@@ -50,10 +51,27 @@ bool takeMotorResumeRequest() {
 
 void requestMotorStop() {
   portENTER_CRITICAL(&motorStopLock);
-  const bool firstStop = !stopLatched;
+  const bool firstStop = !stopLatched && !resetPending;
   stopLatched = true;
   resumePending = false;
   digitalWrite(STBY, LOW);
   portEXIT_CRITICAL(&motorStopLock);
   if (firstStop) SerialDebug.println("STOP: motor drive paused. Send start to resume.");
+}
+
+bool prepareRobotReset() {
+  portENTER_CRITICAL(&motorStopLock);
+  const bool accepted = !resetPending;
+  resetPending = true;
+  stopLatched = true;
+  resumePending = false;
+  digitalWrite(STBY, LOW);
+  portEXIT_CRITICAL(&motorStopLock);
+  return accepted;
+}
+
+void restartRobot() {
+  SerialDebug.println("RESET: rebooting ESP32.");
+  delay(200);  // Give USB and wireless consoles time to send their acknowledgement.
+  ESP.restart();
 }

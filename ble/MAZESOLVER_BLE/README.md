@@ -22,6 +22,8 @@ it, or send `start` from the terminal.
 The phone receives serial messages printed after it connects. USB Serial
 Monitor also works at **115200 baud**. Send `stop` with a newline from
 either console to pause motor drive. Send `start` to resume with a fresh wall check.
+Send `reset` with a newline to reboot the ESP32. Reconnect the BLE terminal
+after it starts.
 
 The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
 complete maze routine.

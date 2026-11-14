@@ -6,3 +6,5 @@ void requestMotorStop();
 bool motorResumeRequested();
 bool requestMotorResume();
 bool takeMotorResumeRequest();
+bool prepareRobotReset();
+void restartRobot();

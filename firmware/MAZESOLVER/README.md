@@ -21,6 +21,7 @@ complete maze routine.
 
 To pause a run, send `stop` at **115200 baud** with **Newline** selected.
 Send `start` to resume with a fresh wall check.
+Send `reset` to reboot the ESP32 and return to the startup gestures.
 
 ## Floor color calibration
 

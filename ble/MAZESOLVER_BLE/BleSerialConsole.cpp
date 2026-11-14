@@ -51,6 +51,10 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
     const uint8_t *data = characteristic->getData();
     for (size_t i = 0; i < length; ++i) {
       const MotorCommand command = stopCommand.read(data[i]);
+      if (command == MotorCommand::Reset) {
+        if (prepareRobotReset()) restartRobot();
+        return;
+      }
       if (command == MotorCommand::Stop) {
         requestMotorStop();
         xQueueReset(incoming);

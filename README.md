@@ -63,6 +63,7 @@ Show a hand to the left APDS and remove it. Keep the robot still until
 to start. Send `stop` over USB Serial with **Newline** selected to pause
 motor drive. Send `start` to resume from the current position. The BLE
 and Wi-Fi sketches also accept both commands over their wireless consoles.
+Send `reset` to reboot the ESP32 and return to the normal startup sequence.
 
 ## Floor color calibration
 

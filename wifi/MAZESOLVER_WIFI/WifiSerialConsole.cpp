@@ -53,7 +53,9 @@ void readUsbCommands() {
   for (int byte = Serial.read(); byte >= 0; byte = Serial.read()) {
     if (byte == '\r' || byte == '\n') {
       line[length] = '\0';
-      if (!tooLong && strcasecmp(line, "stop") == 0) {
+      if (!tooLong && strcasecmp(line, "reset") == 0) {
+        if (prepareRobotReset()) restartRobot();
+      } else if (!tooLong && strcasecmp(line, "stop") == 0) {
         requestMotorStop();
         xQueueReset(usbCommands);
       } else if (!tooLong && strcasecmp(line, "start") == 0 && requestMotorResume()) {
@@ -98,6 +100,12 @@ void receiveCommand() {
   }
   String command = server.arg("command");
   command.trim();
+  if (command.equalsIgnoreCase("reset")) {
+    const bool accepted = prepareRobotReset();
+    server.send(202, "text/plain", "Rebooting ESP32. Reconnect after it starts.");
+    if (accepted) restartRobot();
+    return;
+  }
   if (command.equalsIgnoreCase("stop")) {
     requestMotorStop();
     xQueueReset(commands);
@@ -109,7 +117,7 @@ void receiveCommand() {
     return;
   }
   if (!startupOpen.load() || motorStopRequested()) {
-    server.send(409, "text/plain", "Startup commands are unavailable during a run. Use stop or start to control motion.");
+    server.send(409, "text/plain", "Startup commands are unavailable during a run. Use stop, start, or reset.");
     return;
   }
   if (command.length() == 0 || command.length() > 39) {

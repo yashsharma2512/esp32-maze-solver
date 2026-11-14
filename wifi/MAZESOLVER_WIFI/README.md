@@ -32,6 +32,10 @@ TB6612 **STBY** pin on **GPIO33** and pauses the run. The wheels can coast.
 Send `start` to resume with a fresh wall check. If the console is unreachable, use the
 physical motor power switch.
 
+Send `reset` from either console to reboot the ESP32. The browser console
+disconnects briefly. Rejoin the hotspot if needed, then use the normal
+startup sequence. Saved floor-color references stay in EEPROM.
+
 Send `camera` from either console before `start` to check the Nicla UART
 and the current victim classification. [Nicla Vision wiring and setup](https://github.com/yashsharma2512/esp32-maze-solver/tree/main/vision/NiclaVision)
 

@@ -23,7 +23,7 @@ constexpr char WIFI_CONSOLE_PAGE[] PROGMEM = R"HTML(
 <h1>MazeSolver Console</h1>
 <pre id="log" aria-label="Robot serial output" tabindex="0"></pre>
 <form id="console">
-  <input id="command" name="command" aria-label="Serial command" placeholder="start, stop, camera, c"
+  <input id="command" name="command" aria-label="Serial command" placeholder="start, stop, reset, camera"
          maxlength="39" autocomplete="off" autocapitalize="off" spellcheck="false" required>
   <button type="submit">Send</button>
   <button id="stop" type="button">Stop motors</button>

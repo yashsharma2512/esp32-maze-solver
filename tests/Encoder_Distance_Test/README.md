@@ -15,6 +15,7 @@ sensors, or gyro.
    output. Send `g` for a forward move or `b` for reverse. Send `x` to stop
    the current move. Send `stop` with **Newline** selected to pause.
    Send `start` to continue toward the same distance target.
+   Send `reset` to reboot and return to idle.
 3. Once both wheels spin in the intended direction and their counts increase,
    place the robot on a clear straight path. Mark the center of an axle on the
    floor, send `g`, and measure the *physical* travel after it stops.

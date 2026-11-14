@@ -7,3 +7,5 @@ void beginMotorStop();
 int readUsbCommand();
 bool requestMotorResume();
 bool takeMotorResumeRequest();
+bool prepareRobotReset();
+void restartRobot();
