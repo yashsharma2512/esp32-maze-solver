@@ -9,6 +9,7 @@
 #include <MPU6050_light.h>
 #include <Adafruit_NeoPixel.h>
 #include "WifiSerialConsole.h"
+#include "MotorStop.h"
 #include "maze.h"
 
 #define LED_PIN 4

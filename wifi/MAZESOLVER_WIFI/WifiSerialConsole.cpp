@@ -1,10 +1,12 @@
 #include "WifiSerialConsole.h"
 #include "WifiConsolePage.h"
+#include "MotorStop.h"
 
 #include <ArduinoOTA.h>
 #include <WebServer.h>
 #include <WiFi.h>
 #include <atomic>
+#include <strings.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -23,9 +25,13 @@ constexpr char WEB_USER[] = "maze";
 constexpr char ACCESS_PASSWORD[] = "12345678";
 constexpr char COMMAND_HEADER[] = "X-Maze-Console";
 constexpr size_t LOG_CAPACITY = 4096;
+constexpr size_t COMMAND_CAPACITY = 256;
 
 WebServer server(80);
 QueueHandle_t commands = nullptr;
+StaticQueue_t usbQueueStorage;
+uint8_t usbCommandBytes[COMMAND_CAPACITY];
+QueueHandle_t usbCommands = nullptr;
 std::atomic<bool> startupOpen{false};
 bool otaOpen = false;
 
@@ -38,6 +44,31 @@ bool authenticateConsole() {
   if (server.authenticate(WEB_USER, ACCESS_PASSWORD)) return true;
   server.requestAuthentication(BASIC_AUTH, "MazeSolver");
   return false;
+}
+
+void readUsbCommands() {
+  static char line[40];
+  static size_t length = 0;
+  static bool tooLong = false;
+  for (int byte = Serial.read(); byte >= 0; byte = Serial.read()) {
+    if (byte == '\r' || byte == '\n') {
+      line[length] = '\0';
+      if (!tooLong && strcasecmp(line, "stop") == 0) {
+        requestMotorStop();
+      } else if (!tooLong && length != 0 && uxQueueSpacesAvailable(usbCommands) >= length + 1) {
+        line[length++] = '\n';
+        for (size_t index = 0; index < length; ++index) xQueueSend(usbCommands, &line[index], 0);
+      }
+      length = 0;
+      tooLong = false;
+    } else if (byte < ' ' && byte != '\t') {
+      tooLong = true;
+    } else if (length < sizeof(line) - 1) {
+      line[length++] = char(byte);
+    } else {
+      tooLong = true;
+    }
+  }
 }
 
 void sendLog() {
@@ -61,12 +92,17 @@ void receiveCommand() {
     server.send(403, "text/plain", "Send commands from the robot console.");
     return;
   }
-  if (!startupOpen.load()) {
-    server.send(409, "text/plain", "The robot has started. Reset it to use startup commands.");
-    return;
-  }
   String command = server.arg("command");
   command.trim();
+  if (command.equalsIgnoreCase("stop")) {
+    requestMotorStop();
+    server.send(200, "text/plain", "Motor drive disabled. Reset the ESP32 to start a new run.");
+    return;
+  }
+  if (!startupOpen.load() || motorStopRequested()) {
+    server.send(409, "text/plain", "Reset the ESP32 to use startup commands.");
+    return;
+  }
   if (command.length() == 0 || command.length() > 39) {
     server.send(400, "text/plain", "Enter one command of up to 39 characters.");
     return;
@@ -109,6 +145,9 @@ void runConsole(void *) {
 WifiSerialConsole SerialDebug;
 
 void WifiSerialConsole::begin() {
+  usbCommands = xQueueCreateStatic(COMMAND_CAPACITY, sizeof(char), usbCommandBytes, &usbQueueStorage);
+  readUsbCommands();
+  Serial.onReceive(readUsbCommands);
   if (!WiFi.mode(WIFI_AP_STA)) {
     Serial.println("Wi-Fi mode unavailable.");
     return;
@@ -119,7 +158,7 @@ void WifiSerialConsole::begin() {
     Serial.println("MazeSolver hotspot unavailable.");
     return;
   }
-  commands = xQueueCreate(256, sizeof(char));
+  commands = xQueueCreate(COMMAND_CAPACITY, sizeof(char));
   if (!commands) {
     Serial.println("Wi-Fi command buffer unavailable.");
     return;
@@ -171,6 +210,12 @@ void WifiSerialConsole::endStartup() {
 int WifiSerialConsole::readNetwork() {
   char byte;
   if (!commands || xQueueReceive(commands, &byte, 0) != pdTRUE) return -1;
+  return static_cast<unsigned char>(byte);
+}
+
+int WifiSerialConsole::readUsb() {
+  char byte;
+  if (xQueueReceive(usbCommands, &byte, 0) != pdTRUE) return -1;
   return static_cast<unsigned char>(byte);
 }
 

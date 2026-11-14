@@ -17,14 +17,16 @@ constexpr char WIFI_CONSOLE_PAGE[] PROGMEM = R"HTML(
   input, button { font: inherit; padding: .55rem .7rem; border-radius: .3rem; border: 1px solid #556579; }
   input { flex: 1; min-width: 0; background: #191f27; }
   button { background: #9bd5f1; color: #10202a; cursor: pointer; }
+  #stop { background: #f78b82; color: #281211; }
   #status { min-height: 1.5em; margin: .5rem 0; color: #bccbdb; }
 </style>
 <h1>MazeSolver Console</h1>
 <pre id="log" aria-label="Robot serial output" tabindex="0"></pre>
 <form id="console">
-  <input id="command" name="command" aria-label="Serial command" placeholder="camera, start, c, read, exit"
+  <input id="command" name="command" aria-label="Serial command" placeholder="start, stop, camera, c"
          maxlength="39" autocomplete="off" autocapitalize="off" spellcheck="false" required>
   <button type="submit">Send</button>
+  <button id="stop" type="button">Stop motors</button>
 </form>
 <p id="status" role="status"></p>
 <script>
@@ -52,10 +54,7 @@ constexpr char WIFI_CONSOLE_PAGE[] PROGMEM = R"HTML(
     setTimeout(readLog, 250);
   }
 
-  document.querySelector('#console').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const command = input.value.trim();
-    if (!command) return;
+  async function sendCommand(command) {
     try {
       const response = await fetch('/command', {
         method: 'POST',
@@ -63,10 +62,18 @@ constexpr char WIFI_CONSOLE_PAGE[] PROGMEM = R"HTML(
         body: new URLSearchParams({command})
       });
       statusText.textContent = await response.text();
-      if (response.ok && input.value.trim() === command) input.value = '';
+      return response.ok;
     } catch {
       statusText.textContent = 'Command could not be sent.';
+      return false;
     }
+  }
+
+  document.querySelector('#stop').addEventListener('click', () => sendCommand('stop'));
+  document.querySelector('#console').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const command = input.value.trim();
+    if (command && await sendCommand(command) && input.value.trim() === command) input.value = '';
   });
   readLog();
 </script>

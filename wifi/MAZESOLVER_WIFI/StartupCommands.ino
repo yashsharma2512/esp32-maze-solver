@@ -7,7 +7,7 @@ class StartupCommandInput {
 public:
   bool startRequested(bool fromNetwork, bool allowColorCalibration) {
     while (true) {
-      const int key = fromNetwork ? SerialDebug.readNetwork() : Serial.read();
+      const int key = fromNetwork ? SerialDebug.readNetwork() : SerialDebug.readUsb();
       if (key < 0) break;
       if (key == '\r' || key == '\n') {
         line[length] = '\0';
@@ -33,6 +33,7 @@ public:
 };
 
 bool checkStartupInput(bool allowColorCalibration) {
+  if (motorStopRequested()) return false;
   readSerial();
   SerialDebug.handleOta();
   static StartupCommandInput usb;

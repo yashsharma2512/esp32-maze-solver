@@ -246,8 +246,8 @@ void readColorCommands(bool fromNetwork) {
   size_t length = 0;
   bool tooLong = false;
   // Use the same input that started calibration.
-  while (colorCalibrationActive) {
-    const int key = fromNetwork ? SerialDebug.readNetwork() : Serial.read();
+  while (colorCalibrationActive && !motorStopRequested()) {
+    const int key = fromNetwork ? SerialDebug.readNetwork() : SerialDebug.readUsb();
     if (key < 0) {
       SerialDebug.handleOta();
       delay(1);

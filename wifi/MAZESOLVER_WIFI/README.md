@@ -26,7 +26,11 @@ it, and let the gyro calibrate. Then show a hand to the right APDS and remove
 it, or send `start` from the terminal.
 
 USB Serial Monitor accepts the same commands at **115200 baud** with
-**Newline** selected. Use the motor power switch to stop a run.
+**Newline** selected. During a run, type `stop` in either console or press
+**Stop motors** in the browser. This disables motor drive through the
+TB6612 **STBY** pin on **GPIO33** and ends the run. The wheels can coast.
+Reset the ESP32 to start again. If the console is unreachable, use the
+physical motor power switch.
 
 Send `camera` from either console before `start` to check the Nicla UART
 and the current victim classification. [Nicla Vision wiring and setup](https://github.com/yashsharma2512/esp32-maze-solver/tree/main/vision/NiclaVision)

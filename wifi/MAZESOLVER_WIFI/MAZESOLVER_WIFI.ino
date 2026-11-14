@@ -68,6 +68,10 @@ void setup() {
   SerialDebug.println("Show a hand to the left APDS or send start with a newline.");
   SerialDebug.println("Send camera to check the Nicla Vision link before starting.");
   const bool serialStart = waitForUserInput1();
+  if (motorStopRequested()) {
+    SerialDebug.endStartup();
+    return;
+  }
 
   showColor(strip.Color(0, 100, 100));
 
@@ -103,12 +107,13 @@ void setup() {
 
   SerialDebug.println("MPU calibrated.");
 
-  if (!serialStart) {
+  if (!serialStart && !motorStopRequested()) {
     SerialDebug.println("Show a hand to the right APDS or send start with a newline.");
     waitForUserInput2();
   }
 
   SerialDebug.endStartup();
+  if (motorStopRequested()) return;
   startFloorDetection();
   showColor(strip.Color(0, 50, 0));
 
@@ -117,8 +122,8 @@ void setup() {
   encoderPos = 0;
   enableISR();
 
-  SerialDebug.println("Start");
-  digitalWrite(STBY, HIGH);
+  if (!enableMotorDrive()) return;
+  SerialDebug.println("Start. Send stop to disable the motors.");
 
   while (0) {
     mpu.update();
@@ -128,27 +133,16 @@ void setup() {
     victimDetection();
   }
 
-  digitalWrite(STBY, HIGH);
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */
   // testRotation();
 
   /* Run main algorithm
   Note: function is blocking*/
   // solveMaze();
-  while (1) {
+  while (!motorStopRequested()) {
     // MoveStrightToDistance(500);
     wallFollow(LEFT);
     // delayWithSensorUpdate(500);
-  }
-  /* Stop the motors*/
-  moveMotor(0, 0);
-
-  /* indicate finish state by blinking both leds continously. */
-  while (1) {
-    state = !state;
-    if (LEFTLED >= 0) digitalWrite(LEFTLED, state);
-    if (RIGHTLED >= 0) digitalWrite(RIGHTLED, state);
-    delay(400);
   }
 }
 

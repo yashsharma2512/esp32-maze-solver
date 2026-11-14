@@ -15,6 +15,7 @@ void setMotorIOs() {
 }
 
 void moveMotor(int inL, int inR) {
+  if (motorStopRequested()) return;  // The driver is already in standby.
   inL = (float)inL * 0.985;
   int leftpwm = abs(inL);
   int rightpwm = abs(inR);
@@ -37,7 +38,7 @@ void moveMotor(int inL, int inR) {
 }
 
 void testRotation() {
-  while (1) {
+  while (!motorStopRequested()) {
     updateProximitySensors();
     if (dl > 90) {
       SerialDebug.println("Turn left");
@@ -64,7 +65,7 @@ void frontWallAlign() {
   mpu.resetAngleZ();
   delay(50);
   unsigned long MAX_TIMER = millis();
-  while (true) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     if ((millis() - timer) > 10) {
@@ -110,7 +111,7 @@ void turnBot(int degrees, int direction, int _curve) {
   mpu.resetAngleZ();
   delay(5);
   unsigned long MAX_TIMER = millis();
-  while (true) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     if ((millis() - timer) > 10) {
@@ -157,6 +158,7 @@ void turnBot(int degrees, int direction, int _curve) {
     }
   }
 
+  if (motorStopRequested()) return;
   if (degrees == 90 and direction == LEFT)
     HEADING = (HEADING + 3) % 4;
   else if (degrees == 90 and direction == RIGHT)
@@ -251,6 +253,7 @@ void moveStraightAligned() {
 // }
 
 bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redirects the robot.
+  if (motorStopRequested()) return false;
   int direction = 1;
   if (distance_mm < 0) direction = -1;
   distance_mm = abs(distance_mm);
@@ -261,7 +264,7 @@ bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redire
   encLeft.tare();
   encRight.tare();
 
-  while (1) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     if (handleFloorColor()) return false;
@@ -278,7 +281,7 @@ bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redire
     delay(5);
   }
   moveMotor(0, 0);
-  return true;
+  return !motorStopRequested();
 }
 
 void interpretClicks() {

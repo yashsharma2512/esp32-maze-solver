@@ -107,7 +107,7 @@ void victimDetection() {
 
   // Keep the original approach and victim indication.
   moveMotor(0, 0);
-  while (true) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     readSerial();
@@ -136,7 +136,9 @@ void victimDetection() {
       delayWithSensorUpdate(500);
       strip.clear();
       strip.show();
+      if (motorStopRequested()) return;
       delayWithSensorUpdate(500);
+      if (motorStopRequested()) return;
     }
 
     moveMotor(100, 100);

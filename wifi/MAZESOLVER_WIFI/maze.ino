@@ -3,13 +3,13 @@ void solveMaze() {
   _tick = micros();
   pinMode(WALL_SELECT_PIN, INPUT_PULLUP);
   if (!digitalRead(WALL_SELECT_PIN))
-    while (true)
+    while (!motorStopRequested())
       wallFollow(RIGHT);
   else
-    while (true)
+    while (!motorStopRequested())
       wallFollow(LEFT);
 #elif !defined(LEFTWALLFOLLOW) && defined(RIGHTWALLFOLLOW) && !defined(DFS) && !defined(FLOODFILL)
-  while (true)
+  while (!motorStopRequested())
     WallFollow(RIGHT);
 #elif !defined(LEFTWALLFOLLOW) && !defined(RIGHTWALLFOLLOW) && defined(DFS) && !defined(FLOODFILL)
   dfs();
@@ -57,11 +57,13 @@ void printCoordinates(bool lw, bool rw) {
 }
 
 void wallFollow(int wallToFollow) {
+  if (motorStopRequested()) return;
   mpu.update();
   updateProximitySensors();
   if (handleFloorColor()) return;
 
   if (CAMERA_VICTIM_ACTIONS) victimDetection();
+  if (motorStopRequested()) return;
 
   //IR
   // interpretIR(false);
@@ -100,7 +102,7 @@ void wallFollow(int wallToFollow) {
         if (!MoveStrightToDistance(-TURN_BACKUP_MM)) return;
         delay(100);
       }
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 10 && !motorStopRequested(); i++) {
         delayWithSensorUpdate(20);
         leftWall = (dl_filtered > leftTurnSense);
         rightWall = (dr_filtered > rightTurnSense);

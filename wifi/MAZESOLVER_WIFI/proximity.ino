@@ -93,7 +93,7 @@ void updateProximitySensors() {
 void delayWithSensorUpdate(int ms) {  // only in multiples of 5
   long _curr = millis();
   delay(1);
-  while ((millis() - _curr) < ms) {
+  while (!motorStopRequested() && (millis() - _curr) < ms) {
     mpu.update();
     updateProximitySensors();
     readSerial();
@@ -102,7 +102,7 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
 
 bool waitForUserInput1() {
   bool serialStart = false;
-  while (1) {
+  while (!motorStopRequested()) {
     serialStart = checkStartupInput(true);
     if (serialStart) break;
     updateProximitySensors();
@@ -125,7 +125,7 @@ void waitForUserInput2() {
     pinMode(__arr[i], OUTPUT);  // Set LED pins as outputs
   }
   int i = 0;
-  while (1) {
+  while (!motorStopRequested()) {
     if (checkStartupInput(false)) return;
     updateProximitySensors();
     mpu.update();
@@ -136,7 +136,7 @@ void waitForUserInput2() {
     if (__arr[i] >= 0) digitalWrite(__arr[i], !_logic[i]);
     i = (i + 1) % 4;
   }
-  while (dr > 200) {
+  while (!motorStopRequested() && dr > 200) {
     if (checkStartupInput(false)) return;
     updateProximitySensors();
     mpu.update();
