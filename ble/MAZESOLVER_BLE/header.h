@@ -10,6 +10,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "BleSerialConsole.h"
 #include "maze.h"
+#include "MotorStop.h"
 
 #define LED_PIN 4
 #define LED_COUNT 2

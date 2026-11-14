@@ -15,6 +15,7 @@ void setMotorIOs() {
 }
 
 void moveMotor(int inL, int inR) {
+  if (motorStopRequested()) return;
   inL = (float)inL * 0.985;
   int leftpwm = abs(inL);
   int rightpwm = abs(inR);
@@ -37,7 +38,7 @@ void moveMotor(int inL, int inR) {
 }
 
 void testRotation() {
-  while (1) {
+  while (!motorStopRequested()) {
     updateProximitySensors();
     if (dl > 90) {
       Serial.println("Turn left");
@@ -64,7 +65,7 @@ void frontWallAlign() {
   mpu.resetAngleZ();
   delay(50);
   unsigned long MAX_TIMER = millis();
-  while (true) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     if ((millis() - timer) > 10) {
@@ -110,7 +111,7 @@ void turnBot(int degrees, int direction, int _curve) {
   mpu.resetAngleZ();
   delay(5);
   unsigned long MAX_TIMER = millis();
-  while (true) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     if ((millis() - timer) > 10) {
@@ -157,6 +158,7 @@ void turnBot(int degrees, int direction, int _curve) {
     }
   }
 
+  if (motorStopRequested()) return;
   if (degrees == 90 and direction == LEFT)
     HEADING = (HEADING + 3) % 4;
   else if (degrees == 90 and direction == RIGHT)
@@ -261,7 +263,7 @@ void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
   encLeft.tare();
   encRight.tare();
 
-  while (1) {
+  while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
     float lft = abs(encLeft.getAngle());

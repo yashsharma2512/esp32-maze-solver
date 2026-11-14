@@ -14,7 +14,7 @@ public:
     }
 
     while (session == 0 || SerialDebug.session() == session) {
-      const int key = session == 0 ? Serial.read() : SerialDebug.readBle();
+      const int key = session == 0 ? readUsbCommand() : SerialDebug.readBle();
       if (key < 0) break;
       if (allowColorCalibration && length == 0 && !tooLong && (key == 'c' || key == 'C')) {
         runColorCalibration(session);
@@ -37,6 +37,7 @@ public:
 };
 
 bool checkStartupInput(bool allowColorCalibration) {
+  if (motorStopRequested()) return false;
   static StartupCommandInput usb;
   static StartupCommandInput ble;
   if (usb.startRequested(0, allowColorCalibration)) return true;

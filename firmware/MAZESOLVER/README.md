@@ -19,6 +19,9 @@ complete maze routine.
 | `OPENING_ADVANCE_MM` | Forward distance before turning into a side opening |
 | `TURN_BACKUP_MM` | Backup distance after a single turn |
 
+To stop a run, send `stop` at **115200 baud** with **Newline** selected.
+Reset the ESP32 to run again.
+
 ## Floor color calibration
 
 Mount the AS7341 facing the floor and connect it to TCA CH2. The main

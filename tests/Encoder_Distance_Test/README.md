@@ -12,7 +12,9 @@ sensors, or gyro.
    **115200 baud**.
 2. Lift the wheels for the first check. The driver stays in standby until a
    command arrives. Confirm both encoders show `OK` magnet status in the idle
-   output. Send `g` for a forward move or `b` for reverse. Send `x` to stop.
+   output. Send `g` for a forward move or `b` for reverse. Send `x` to stop
+   the current move. Send `stop` with **Newline** selected to disable motor
+   drive until you reset the ESP32.
 3. Once both wheels spin in the intended direction and their counts increase,
    place the robot on a clear straight path. Mark the center of an axle on the
    floor, send `g`, and measure the *physical* travel after it stops.

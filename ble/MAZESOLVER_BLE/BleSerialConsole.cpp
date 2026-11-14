@@ -1,4 +1,6 @@
 #include "BleSerialConsole.h"
+#include "MotorStop.h"
+#include "StopCommand.h"
 
 #include <BLE2902.h>
 #include <BLEDevice.h>
@@ -35,10 +37,22 @@ class ConnectionCallbacks : public BLEServerCallbacks {
 };
 
 class ReceiveCallbacks : public BLECharacteristicCallbacks {
+  StopCommand stopCommand;
+  uint32_t previousSession = 0;
+
   void onWrite(BLECharacteristic *characteristic) override {
+    const uint32_t session = activeSession.load();
+    if (session == 0) return;
+    if (session != previousSession) {
+      stopCommand.reset();
+      previousSession = session;
+    }
     const size_t length = characteristic->getLength();
-    if (activeSession.load() == 0 || length > uxQueueSpacesAvailable(incoming)) return;
     const uint8_t *data = characteristic->getData();
+    for (size_t i = 0; i < length; ++i) {
+      if (stopCommand.read(data[i])) requestMotorStop();
+    }
+    if (motorStopRequested() || length > uxQueueSpacesAvailable(incoming)) return;
     for (size_t i = 0; i < length; ++i) xQueueSend(incoming, &data[i], 0);
   }
 };

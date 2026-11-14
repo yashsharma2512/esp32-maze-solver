@@ -22,6 +22,7 @@ void setup() {
   digitalWrite(STBY, LOW);
 
   /* Set motor outputs */
+  beginMotorStop();
   setMotorIOs();
   /* Initialize I2C module */
   beginWire();
@@ -77,6 +78,7 @@ void setup() {
   showColor(strip.Color(0, 0, 100));
   /* let the bot rest and wait for user input from proximity sensor > diagonal left */
   waitForUserInput1();
+  if (motorStopRequested()) return;
 
   showColor(strip.Color(0, 100, 100));
 
@@ -122,8 +124,8 @@ void setup() {
   encoderPos = 0;
   enableISR();
 
-  SerialDebug.println("Start");
-  digitalWrite(STBY, HIGH);
+  if (!enableMotorDrive()) return;
+  SerialDebug.println("Start. Send stop to disable the motors.");
 
   while (0) {
     mpu.update();
@@ -133,27 +135,16 @@ void setup() {
     victimDetection();
   }
 
-  digitalWrite(STBY, HIGH);
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */
   // testRotation();
 
   /* Run main algorithm
   Note: function is blocking*/
   // solveMaze();
-  while (1) {
+  while (!motorStopRequested()) {
     // MoveStrightToDistance(500);
     wallFollow(LEFT);
     // delayWithSensorUpdate(500);
-  }
-  /* Stop the motors*/
-  moveMotor(0, 0);
-
-  /* indicate finish state by blinking both leds continously. */
-  while (1) {
-    state = !state;
-    if (LEFTLED >= 0) digitalWrite(LEFTLED, state);
-    if (RIGHTLED >= 0) digitalWrite(RIGHTLED, state);
-    delay(400);
   }
 }
 

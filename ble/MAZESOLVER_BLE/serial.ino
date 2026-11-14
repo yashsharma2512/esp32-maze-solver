@@ -114,7 +114,7 @@ void victimDetection() {
   if (elapsedTime > 5) {
     if (victimType == 2 or victimType == 1 or victimType == 0) {
       moveMotor(0, 0);
-      while (true) {
+      while (!motorStopRequested()) {
         mpu.update();
         updateProximitySensors();
         readSerial();
@@ -153,7 +153,7 @@ void victimDetection() {
             else if (victimType == 0)
               _clr = strip.Color(0, 100, 0);
 
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 5 && !motorStopRequested(); i++) {
               showColor(_clr);
               delayWithSensorUpdate(500);
               strip.clear();

@@ -204,8 +204,9 @@ void readColorCommands() {
   static char line[40];
   static size_t length = 0;
   static bool tooLong = false;
-  while (colorCalibrationActive && Serial.available()) {
-    const int key = Serial.read();
+  while (colorCalibrationActive && !motorStopRequested()) {
+    const int key = readUsbCommand();
+    if (key < 0) break;
     if (key == '\r' || key == '\n') {
       line[length] = '\0';
       if (tooLong) Serial.println("Color command too long. Send help.");
@@ -222,11 +223,12 @@ void readColorCommands() {
 
 // The left-hand startup wait calls this before enabling the motors.
 void checkColorCalibration() {
-  while (Serial.available()) {
-    const int command = Serial.read();
+  while (!motorStopRequested()) {
+    const int command = readUsbCommand();
+    if (command < 0) break;
     if (command != 'c' && command != 'C') continue;
     beginColorCalibration();
-    while (colorCalibrationActive) {
+    while (colorCalibrationActive && !motorStopRequested()) {
       readColorCommands();
       delay(1);
     }

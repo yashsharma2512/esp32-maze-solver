@@ -20,7 +20,8 @@ it, and let the gyro calibrate. Then show a hand to the right APDS and remove
 it, or send `start` from the terminal.
 
 The phone receives serial messages printed after it connects. USB Serial
-Monitor also works at **115200 baud**. Use the motor power switch to stop a run.
+Monitor also works at **115200 baud**. Send `stop` with a newline from
+either console to disable motor drive. Reset the ESP32 to start a new run.
 
 The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
 complete maze routine.

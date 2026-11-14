@@ -3,6 +3,7 @@
 // Send g to move a known distance; measure the actual floor distance with a ruler.
 #include <Arduino.h>
 #include <Wire.h>
+#include "MotorStop.h"
 
 constexpr int SDA_PIN = 21, SCL_PIN = 22;
 constexpr uint8_t TCA_ADDR = 0x70, AS5600_ADDR = 0x36;
@@ -128,6 +129,7 @@ void initMotorPins() {
 
 // Same signed motor convention and left trim as the original firmware.
 void moveMotor(int left, int right) {
+  if (motorStopRequested()) return;
   left = constrain(left, -255, 255);
   right = constrain(right, -255, 255);
   left = int(left * 0.985f);
@@ -137,7 +139,7 @@ void moveMotor(int left, int right) {
   digitalWrite(LMR, left < 0 ? HIGH : LOW);
   digitalWrite(RMF, right > 0 ? HIGH : LOW);
   digitalWrite(RMR, right < 0 ? HIGH : LOW);
-  digitalWrite(STBY, HIGH);
+  if (!enableMotorDrive()) return;
   analogWrite(PWML, abs(left));
   analogWrite(PWMR, abs(right));
   leftPWM = left;
@@ -157,7 +159,7 @@ void stopMove(const char *reason) {
 }
 
 void startMove(int direction) {
-  if (moving) return;
+  if (moving || motorStopRequested()) return;
   if (!busReady) {
     Serial.println("START BLOCKED: encoder bus is not ready.");
     return;
@@ -196,6 +198,7 @@ void printStatus() {
 void setup() {
   Serial.begin(115200);
   initMotorPins(); // Driver remains in standby until an explicit command.
+  beginMotorStop();
   delay(500);
   Serial.println("\nESP32 AS5600 ENCODER DISTANCE MOVE TEST");
   Serial.printf("Wheel=%.1f mm; target=%.1f mm; 1 revolution=4096 counts=%.1f mm; target=%.0f counts\n",
@@ -203,6 +206,7 @@ void setup() {
                 WHEEL_CIRCUMFERENCE_MM, TARGET_COUNTS);
   Serial.printf("LEFT=TCA CH%u RIGHT=TCA CH%u. g=forward, b=reverse, x=stop.\n",
                 LEFT_CH, RIGHT_CH);
+  Serial.println("Send stop with Newline to disable motor drive until reset.");
   Serial.println("Motors will not start until g or b is sent. Lift wheels for first check.");
   Wire.begin(SDA_PIN, SCL_PIN, 100000);
   Wire.setTimeOut(50);
@@ -214,12 +218,12 @@ void setup() {
 }
 
 void loop() {
-  while (Serial.available()) {
-    char c = Serial.read();
+  for (int c = readUsbCommand(); c >= 0; c = readUsbCommand()) {
     if (c == 'x' || c == 'X') stopMove("user command");
     else if (c == 'g' || c == 'G') startMove(1);
     else if (c == 'b' || c == 'B') startMove(-1);
   }
+  if (motorStopRequested() && moving) stopMove("user command");
 
   uint32_t now = millis();
   if (moving && now - moveStartMs > MAX_MOVE_MS) stopMove("encoder timeout");

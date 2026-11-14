@@ -246,8 +246,9 @@ void readColorCommands(uint32_t bleSession) {
   size_t length = 0;
   bool tooLong = false;
   // Keep each command line on the connection that started calibration.
-  while (colorCalibrationActive && (bleSession == 0 || SerialDebug.session() == bleSession)) {
-    const int key = bleSession == 0 ? Serial.read() : SerialDebug.readBle();
+  while (colorCalibrationActive && !motorStopRequested() &&
+         (bleSession == 0 || SerialDebug.session() == bleSession)) {
+    const int key = bleSession == 0 ? readUsbCommand() : SerialDebug.readBle();
     if (key < 0) {
       delay(1);
       continue;

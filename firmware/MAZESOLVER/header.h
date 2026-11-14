@@ -9,6 +9,7 @@
 #include <MPU6050_light.h>
 #include <Adafruit_NeoPixel.h>
 #include "maze.h"
+#include "MotorStop.h"
 
 #define LED_PIN 4
 #define LED_COUNT 2
