@@ -2,11 +2,9 @@
 #include "WifiConsolePage.h"
 
 #include <ArduinoOTA.h>
-#include <Preferences.h>
 #include <WebServer.h>
 #include <WiFi.h>
 #include <atomic>
-#include <esp_random.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -18,19 +16,11 @@ constexpr char MAZE_WIFI_SSID[] = "";
 constexpr char MAZE_WIFI_PASSWORD[] = "";
 #endif
 
-#ifndef MAZE_ACCESS_PASSWORD
-#define MAZE_ACCESS_PASSWORD ""
-#endif
-
 namespace {
 constexpr char AP_NAME[] = "MazeSolver";
 constexpr char HOSTNAME[] = "mazesolver";
 constexpr char WEB_USER[] = "maze";
-constexpr char FIXED_PASSWORD[] = MAZE_ACCESS_PASSWORD;
-constexpr size_t FIXED_PASSWORD_LENGTH = sizeof(FIXED_PASSWORD) - 1;
-static_assert(FIXED_PASSWORD_LENGTH == 0 ||
-              (FIXED_PASSWORD_LENGTH >= 8 && FIXED_PASSWORD_LENGTH <= 63),
-              "MAZE_ACCESS_PASSWORD must be empty or 8 to 63 characters.");
+constexpr char ACCESS_PASSWORD[] = "12345678";
 constexpr char COMMAND_HEADER[] = "X-Maze-Console";
 constexpr size_t LOG_CAPACITY = 4096;
 
@@ -38,34 +28,14 @@ WebServer server(80);
 QueueHandle_t commands = nullptr;
 std::atomic<bool> startupOpen{false};
 bool otaOpen = false;
-const char *password = nullptr;
 
 portMUX_TYPE logLock = portMUX_INITIALIZER_UNLOCKED;
 char logBytes[LOG_CAPACITY];
 uint32_t logNext = 0;
 size_t logSize = 0;
 
-const char *loadPassword() {
-  if (FIXED_PASSWORD_LENGTH != 0) return FIXED_PASSWORD;
-
-  static char generatedPassword[13];
-  Preferences settings;
-  const bool opened = settings.begin("maze_wifi", false);
-  const String saved = opened ? settings.getString("pass") : String();
-  if (saved.length() == sizeof(generatedPassword) - 1) {
-    saved.toCharArray(generatedPassword, sizeof(generatedPassword));
-  } else {
-    snprintf(generatedPassword, sizeof(generatedPassword), "%08lx%04lx",
-             static_cast<unsigned long>(esp_random()),
-             static_cast<unsigned long>(esp_random() & 0xffff));
-    if (opened) settings.putString("pass", generatedPassword);
-  }
-  if (opened) settings.end();
-  return generatedPassword;
-}
-
 bool authenticateConsole() {
-  if (server.authenticate(WEB_USER, password)) return true;
+  if (server.authenticate(WEB_USER, ACCESS_PASSWORD)) return true;
   server.requestAuthentication(BASIC_AUTH, "MazeSolver");
   return false;
 }
@@ -143,8 +113,7 @@ void WifiSerialConsole::begin() {
     Serial.println("Wi-Fi mode unavailable.");
     return;
   }
-  password = loadPassword();
-  const bool apStarted = WiFi.softAP(AP_NAME, password);
+  const bool apStarted = WiFi.softAP(AP_NAME, ACCESS_PASSWORD);
   if (MAZE_WIFI_SSID[0] != '\0') WiFi.begin(MAZE_WIFI_SSID, MAZE_WIFI_PASSWORD);
   if (!apStarted && MAZE_WIFI_SSID[0] == '\0') {
     Serial.println("MazeSolver hotspot unavailable.");
@@ -177,13 +146,9 @@ void WifiSerialConsole::begin() {
   if (apStarted) {
     SerialDebug.printf("Wi-Fi hotspot: %s | console: http://%s\n", AP_NAME, WiFi.softAPIP().toString().c_str());
   }
-  if (FIXED_PASSWORD_LENGTH == 0) {
-    Serial.printf("Wi-Fi and OTA password: %s | console user: %s\n", password, WEB_USER);
-  } else {
-    Serial.printf("Using the password from WifiSecrets.h | console user: %s\n", WEB_USER);
-  }
+  Serial.printf("Wi-Fi and OTA password: %s | console user: %s\n", ACCESS_PASSWORD, WEB_USER);
   ArduinoOTA.setHostname(HOSTNAME);
-  ArduinoOTA.setPassword(password);
+  ArduinoOTA.setPassword(ACCESS_PASSWORD);
   ArduinoOTA.onStart([] { SerialDebug.println("OTA upload started."); });
   ArduinoOTA.onError([](ota_error_t error) { SerialDebug.printf("OTA error %u.\n", unsigned(error)); });
   ArduinoOTA.begin();

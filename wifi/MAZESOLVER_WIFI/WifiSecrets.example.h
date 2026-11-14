@@ -1,9 +1,8 @@
 #pragma once
 
-// Copy to WifiSecrets.h in this sketch folder to set your passwords.
-// Use 8 to 63 characters. Leave empty to use the password shown on USB Serial.
-#define MAZE_ACCESS_PASSWORD ""
-
-// Optional router credentials for AP+STA mode.
+// Copy to WifiSecrets.h in this sketch folder only to connect to a router.
+// The MazeSolver hotspot, browser console, and OTA password is fixed in
+// WifiSerialConsole.cpp as 12345678.
+// Optional router credentials for AP+STA mode must match your router.
 constexpr char MAZE_WIFI_SSID[] = "";
 constexpr char MAZE_WIFI_PASSWORD[] = "";

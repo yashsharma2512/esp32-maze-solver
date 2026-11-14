@@ -7,18 +7,16 @@ helper in `MPU6050_light.h` as the regular maze sketch.
 
 ## Connect to the browser console
 
-1. For a fixed password, copy `WifiSecrets.example.h` to `WifiSecrets.h`
-   in this sketch folder. Set `MAZE_ACCESS_PASSWORD` to 8–63 characters.
-   The hotspot, browser console, and OTA use this password. To also join a
-   router, fill in the optional router credentials in the same file.
-2. Upload over USB. If `MAZE_ACCESS_PASSWORD` is empty or absent, open USB
-   Serial Monitor at **115200 baud** and copy the generated **Wi-Fi and OTA
-   password** from the startup message. The ESP32 saves it for later boots.
+1. Upload over USB. The **MazeSolver** hotspot, browser console, and OTA
+   upload password is **`12345678`**. To also join an existing router, copy
+   `WifiSecrets.example.h` to `WifiSecrets.h` and fill in that router's SSID
+   and password. The router password must match the router's own settings.
+2. Open USB Serial Monitor at **115200 baud** to see the connection details.
    Keep **Erase All Flash Before Sketch Upload** disabled to retain saved
    color references.
 3. Join the **MazeSolver** hotspot and open **http://192.168.4.1** in a
    browser. On the router's network, use the **Router console** IP printed at
-   startup. Sign in as `maze` with the same password you use for the hotspot.
+   startup. Sign in as `maze` with password `12345678`.
 4. Use the page to read logs and send commands. For color calibration, send
    `c`, then `exit` when finished. Keep the robot still and send `start`.
    The sketch calibrates the gyro before enabling the motors.
@@ -38,7 +36,7 @@ and the current victim classification. [Nicla Vision wiring and setup](https://g
 Reset the robot and leave it at the startup prompt with the motors in
 standby. Connect your PC to the same router or to the MazeSolver hotspot.
 Choose the **mazesolver** network port under **Tools > Port** in Arduino
-IDE, upload, and enter the hotspot password when prompted. The
+IDE, upload, and enter `12345678` when prompted. The
 robot restarts after a successful upload. OTA closes when a run begins.
 
 The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
