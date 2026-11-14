@@ -178,11 +178,11 @@ void moveStraightAligned() {
   int error = 0;
   int gyroerror = mpu.getAngleZ() * kp_gyroAssist;
   if (leftWall and rightWall) {
-    error = leftWallValue - rightWallValue;
+    error = (leftWallValue - leftWallOffset) - (rightWallValue - rightWallOffset);
   } else if (leftWall and !rightWall) {
     error = leftWallValue - leftWallOffset;
   } else if (!leftWall and rightWall) {
-    error = leftWallOffset - rightWallValue;
+    error = rightWallOffset - rightWallValue;
   }
   error = constrain(error, -MAX_error, MAX_error);
   int ce_move = error - pe_move;
@@ -191,11 +191,8 @@ void moveStraightAligned() {
   p_move = error * kp_move;
   d_move = ce_move * kd_move;
   int drive = p_move + d_move;
-  if (drive > MAXSPEED_move)
-    drive = MAXSPEED_move;
-  if (drive < -MAXSPEED_move)
-    drive = -MAXSPEED_move;
-  moveMotor(BASESPEED_move + drive + gyroerror, BASESPEED_move - drive - gyroerror);
+  const int correction = constrain(drive + gyroerror, -MAX_WALL_CORRECTION, MAX_WALL_CORRECTION);
+  moveMotor(BASESPEED_move + correction, BASESPEED_move - correction);
 }
 
 // void moveStraightAlignedToDistanceForCurve(float _distance)

@@ -6,8 +6,8 @@ constexpr int FLOW_TEST_STAGE = 4;
 // 4 = run the full maze flow with click switches and victim detection
 static_assert(FLOW_TEST_STAGE >= 1 && FLOW_TEST_STAGE <= 4, "Choose a stage from 1 to 4.");
 
-constexpr int FRONT_WALL_THRESHOLD = 150;
-constexpr int OPENING_ADVANCE_MM = 220;
+constexpr int FRONT_WALL_THRESHOLD = 200;
+constexpr int OPENING_ADVANCE_MM = 200;
 constexpr int TURN_BACKUP_MM = 30;
 
 //////////////////////////////////////////////////////////////////////
@@ -139,11 +139,12 @@ constexpr uint8_t COLOR_CH = 2; // Bottom-facing AS7341 on TCA CH2
 //////////////////////////////////////////////////////////////////////
 // move straight PD parameter(s)
 //////////////////////////////////////////////////////////////////////
-#define kp_move 1.2
-#define kd_move 1.5
+#define kp_move 0.50
+#define kd_move 0.25
 #define BASESPEED_move 100
 #define MAXSPEED_move BASESPEED_move+20
 #define MAX_error 75
+constexpr int MAX_WALL_CORRECTION = 40; // Limit combined wall and gyro steering without changing drive speed
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////

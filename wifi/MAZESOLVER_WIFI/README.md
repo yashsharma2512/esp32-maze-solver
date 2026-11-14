@@ -48,6 +48,7 @@ complete maze routine.
 | `leftWallOffset` | Filtered APDS target while following one wall |
 | `wallSense` | Side sensor cutoff for straight steering |
 | `kp_move`, `kd_move` | Straight steering gains |
+| `MAX_WALL_CORRECTION` | Maximum PWM difference applied by wall and gyro steering |
 | `FRONT_WALL_THRESHOLD` | Front APDS count that triggers front-wall handling when exceeded |
 | `kp_turn`, `kd_turn` | Gyro turn gains |
 | `OPENING_ADVANCE_MM` | Forward distance before turning into a side opening |

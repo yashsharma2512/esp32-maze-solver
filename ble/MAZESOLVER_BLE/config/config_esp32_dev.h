@@ -1,6 +1,6 @@
 // Front proximity threshold and corner distances.
-constexpr int FRONT_WALL_THRESHOLD = 100;
-constexpr int OPENING_ADVANCE_MM = 180;
+constexpr int FRONT_WALL_THRESHOLD = 200;
+constexpr int OPENING_ADVANCE_MM = 200;
 constexpr int TURN_BACKUP_MM = 30;
 
 //////////////////////////////////////////////////////////////////////
@@ -25,10 +25,10 @@ static_assert(APDS_PROXIMITY_GAIN == 1 || APDS_PROXIMITY_GAIN == 2 ||
 
 int wallSense = 25; // Threshold value to detect walls by the diagonal sensors while moving straight.
 
-int leftWallOffset = 100;
+int leftWallOffset = 180;
 int rightWallOffset = 50;
 
-float leftTurnSense = 15;
+float leftTurnSense = 9;
 float rightTurnSense = 9;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,11 +133,12 @@ constexpr float FLOOR_COLOR_MATCH_TOLERANCE = 0.30f;
 //////////////////////////////////////////////////////////////////////
 // move straight PD parameter(s)
 //////////////////////////////////////////////////////////////////////
-#define kp_move 0.85
-#define kd_move 1.5
+#define kp_move 0.50
+#define kd_move 0.25
 #define BASESPEED_move 100
 #define MAXSPEED_move BASESPEED_move+20
 #define MAX_error 75
+constexpr int MAX_WALL_CORRECTION = 40; // Limit combined wall and gyro steering without changing drive speed
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////
