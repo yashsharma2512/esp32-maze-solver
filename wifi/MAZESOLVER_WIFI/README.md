@@ -71,7 +71,11 @@ sketch turns on its illumination LED at 4 mA during setup.
    `start` or the hand gestures.
 
 Use the actual floor material at a consistent height for calibration and
-comparison. The closest match is based on the raw band counts.
+comparison. Each saved reference is the average of five readings across
+F1–F8, Clear, and NIR. Matching compares all ten raw band counts and rejects
+readings that are too far from a reference. An action tile match is also
+rejected if another saved color is nearly as close. Saving an existing name
+replaces its previous reference.
 
 ## Floor tiles while solving
 

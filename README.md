@@ -32,7 +32,8 @@ sketch uses this helper in the public section of the library's
 
     void resetAngleZ() { angleZ = 0; }
 
-The main sketch and tuning stage 4 also use **Adafruit AS7341** and **Adafruit BusIO**.
+The main, Wi-Fi, and BLE sketches and tuning stage 4 also use **Adafruit AS7341**
+and **Adafruit BusIO**.
 
 ## Wiring
 
@@ -61,5 +62,36 @@ Show a hand to the left APDS and remove it. Keep the robot still until
 `MPU calibrated.` appears. Then show a hand to the right APDS and remove it
 to start. Use the motor power switch to stop the run.
 
-For floor color readings or calibration, send `c` before the first hand
-gesture. [AS7341 calibration commands](firmware/MAZESOLVER/README.md#floor-color-calibration)
+## Floor color calibration
+
+The bottom-facing AS7341 is on TCA CH2. Its illumination LED turns on at
+4 mA during setup. Calibrate with the sensor at its normal height above the
+actual course tiles and the robot stopped. Open USB Serial Monitor at
+**115200 baud** with **Newline** selected. The [Wi-Fi sketch](wifi/MAZESOLVER_WIFI/README.md)
+also accepts these commands in its browser console; the [BLE sketch](ble/MAZESOLVER_BLE/README.md)
+accepts them over BLE.
+
+1. Before the first hand gesture or `start`, send `c` to enter calibration.
+2. Put ordinary floor under the sensor and send `save floor`. Put each tile
+   under the sensor in turn and send `save black`, `save blue`, and
+   `save silver` for the tile types you have. An existing `white` reference
+   can serve as ordinary floor if it represents the course surface.
+3. Send `read` on each surface. It shows the ten sensor bands, the closest
+   saved reference, and, in the Wi-Fi and BLE sketches, the `Driving match`.
+   Send `list` to see stored references; `delete black` removes one.
+4. Send `exit`, then use `start` or the hand gestures supported by your
+   sketch to begin the run.
+
+Each `save` averages five readings of F1–F8, Clear, and NIR and stores the
+reference in flash. Up to 16 named references survive a reset; saving the
+same name replaces it. During a run, the Wi-Fi and BLE sketches compare new
+readings against the saved references and reject uncertain matches. Floor
+detection needs a `floor` or `white` reference and at least one of `black`,
+`blue`, or `silver`. It confirms a tile with two readings before reacting:
+black causes a U-turn, blue stops the robot for five seconds, and silver
+flashes the NeoPixels.
+
+The [main firmware](firmware/MAZESOLVER/README.md#floor-color-calibration) and
+tuning stage 4 include the calibration commands but do not act on floor
+colors during maze runs. Upload the Wi-Fi or BLE sketch to use the tile
+actions.
