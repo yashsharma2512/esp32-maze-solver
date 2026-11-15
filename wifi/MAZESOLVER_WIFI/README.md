@@ -36,7 +36,7 @@ Send `reset` from either console to reboot the ESP32. The browser console
 disconnects briefly. Rejoin the hotspot if needed, then use the normal
 startup sequence. Saved floor-color references stay in EEPROM.
 
-[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO16 (UART1 RX).
+[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO35 (UART1 RX).
 Confirmed Φ/Ψ/Ω letters and cognitive rings appear in the USB and browser logs.
 Send `camera` at the startup prompt to check the live link and both detections.
 

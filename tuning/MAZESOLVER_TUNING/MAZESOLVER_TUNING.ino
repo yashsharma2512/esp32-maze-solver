@@ -16,6 +16,7 @@ void setup() {
   SerialDebug.begin(115200);
   Serial.printf("FLOW TEST STAGE %d | front APDS CH%d\n", FLOW_TEST_STAGE, FL);
 
+  Serial1.enableRxInternalPull(false);  // GPIO35 has no internal pull-up.
   Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
   // SerialUSB.begin(115200);
 

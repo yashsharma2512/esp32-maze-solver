@@ -8,6 +8,7 @@ void setup() {
   /* Initialize Serial module */
   Serial.begin(115200);
 
+  Serial1.enableRxInternalPull(false);  // GPIO35 has no internal pull-up.
   Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
   // SerialUSB.begin(115200);
 

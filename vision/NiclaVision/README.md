@@ -13,7 +13,7 @@ external UART at 115200 baud. In OpenMV it opens as `machine.UART(9, 115200)`.
 
 | Nicla Vision | ESP32 Dev Module |
 | --- | --- |
-| **D1 / UART_TX** (J2 pin 3) | **GPIO16** (UART1 RX) |
+| **D1 / UART_TX** (J2 pin 3) | **GPIO35** (UART1 RX) |
 | **GND** (J2 pin 6) | **GND** |
 
 Only the Nicla transmits, so leave its D2 / UART_RX (J2 pin 4) unconnected.
@@ -40,11 +40,11 @@ or from the browser console.
 
 | Output | What to check |
 | --- | --- |
-| `Camera UART: ... bytes received, ... packets accepted since boot.` | A running Nicla should make both counts rise. Check D1/TX, GPIO16 and ground if the byte count stays flat. If only the byte count rises, check the baud rate and packet format. |
+| `Camera UART: ... bytes received, ... packets accepted since boot.` | A running Nicla should make both counts rise. Check D1/TX, GPIO35 and ground if the byte count stays flat. If only the byte count rises, check the baud rate and packet format. |
 | `Camera ring: linked, no target.` or `Camera PSO: linked, no target.` | The UART works. Present the corresponding target and send `camera` again. |
 | `COGNITIVE: HARMED`, `STABLE`, or `UNHARMED` | Check the color classification and the five sample markers in the preview. |
 | `PSO: PHI`, `PSI`, or `OMEGA` | Check the letter in the preview. |
-| `Camera: no recent Nicla packet.` | Check the script is running, then check J2 pin 3 to GPIO16 and the shared ground. |
+| `Camera: no recent Nicla packet.` | Check the script is running, then check J2 pin 3 to GPIO35 and the shared ground. |
 
 Each frame sends one CSV line per detector with the type, milliseconds the
 type has been visible, and its x/y center in half-resolution coordinates.

@@ -7,7 +7,7 @@ the usual **Adafruit NeoPixel**, **MPU6050_light**, **Adafruit AS7341**, and
 Use the same `resetAngleZ()` helper in
 `MPU6050_light.h` as the regular maze sketch.
 
-[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO16 (UART1 RX) and
+[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO35 (UART1 RX) and
 reports confirmed Φ/Ψ/Ω letters and cognitive rings over USB Serial and BLE.
 
 ## Connect from your phone

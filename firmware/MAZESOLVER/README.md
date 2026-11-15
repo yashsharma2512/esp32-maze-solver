@@ -7,7 +7,7 @@ libraries, and the hand-gesture start sequence.
 The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
 complete maze routine.
 
-[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO16 (UART1 RX) and
+[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO35 (UART1 RX) and
 reports confirmed Φ/Ψ/Ω letters and cognitive rings over USB Serial.
 
 | Setting | What it controls |

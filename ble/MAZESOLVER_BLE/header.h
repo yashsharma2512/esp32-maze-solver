@@ -19,7 +19,7 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // Servo dropper;
 #define dropperAngle 85
 
-#define RX_PIN 16
+#define RX_PIN 35  // Nicla TX connects here.
 #define TX_PIN 17
 
 /////////////////////////////////////////////////////////////////////////////////
