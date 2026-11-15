@@ -8,7 +8,8 @@ over UART1.
 ## 1. Wire the camera
 
 Power both boards over USB for the first test. The script uses the Nicla's
-LP1 UART at 115200 baud.
+external UART at 115200 baud. In OpenMV it opens as `machine.UART(9, 115200)`.
+[Arduino Nicla Vision UART guide](https://docs.arduino.cc/tutorials/nicla-vision/user-manual/#uart)
 
 | Nicla Vision | ESP32 Dev Module |
 | --- | --- |
@@ -23,6 +24,8 @@ Only the Nicla transmits, so leave its D2 / UART_RX (J2 pin 4) unconnected.
 Open `main.py` in OpenMV IDE, connect the Nicla, and press Run. Place a
 victim marker in front of the camera and check the label in the preview.
 To run it at power-on, save the script as `main.py` on the Nicla's flash.
+If UART setup or writing fails, the IDE prints the error and keeps the camera
+preview and detectors running.
 [Getting started with OpenMV on Nicla Vision](https://docs.arduino.cc/tutorials/nicla-vision/getting-started/)
 
 ## 3. Check the ESP32 link before driving

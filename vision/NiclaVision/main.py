@@ -1,8 +1,5 @@
 import time
-from pyb import LED, UART
-
-# Nicla D1 / UART_TX (J2 pin 3) goes to ESP32 GPIO16.
-uart = UART("LP1", 115200)
+from pyb import LED
 
 try:
     import csi
@@ -152,13 +149,23 @@ NO_RING = -1
 NO_LETTER = -2
 
 
+def open_camera_uart():
+    # Arduino's OpenMV UART mapping uses bus 9 on Nicla J2 pins 3 and 4.
+    try:
+        from machine import UART
+        return UART(9, 115200)
+    except (ImportError, OSError, TypeError, ValueError) as error:
+        print("Nicla UART unavailable. Camera preview will continue:", error)
+        return None
+
+
 class TargetReporter:
     def __init__(self, clear_id):
         self.clear_id = clear_id
         self.previous_type = clear_id
         self.changed_at = time.ticks_ms()
 
-    def send(self, target, now):
+    def packet(self, target, now):
         if target is None:
             target_type, x, y = self.clear_id, -1, -1
         else:
@@ -169,7 +176,7 @@ class TargetReporter:
             self.previous_type = target_type
             self.changed_at = now
         age = time.ticks_diff(now, self.changed_at) if target is not None else 0
-        uart.write("%d,%d,%d,%d\n" % (target_type, age, x, y))
+        return "%d,%d,%d,%d\n" % (target_type, age, x, y)
 
 
 def ring_color(img, x, y):
@@ -291,10 +298,12 @@ def detect_letters(img, preview):
 
 ring_reporter = TargetReporter(NO_RING)
 letter_reporter = TargetReporter(NO_LETTER)
-print("Nicla: PSO and cognitive ready on LP1 UART at 115200")
 ring_search = camera.snapshot().copy(x_scale=RING_SEARCH_SCALE, y_scale=RING_SEARCH_SCALE)
 gray_buffer = None
 last_log = time.ticks_ms()
+uart = open_camera_uart()
+if uart is not None:
+    print("Nicla: PSO and cognitive ready on UART9 at 115200")
 
 while True:
     clock.tick()
@@ -349,8 +358,13 @@ while True:
         preview.draw_rectangle(rect, thickness=2)
         preview.draw_string((x, max(0, y - 18)), status, scale=2)
 
-    ring_reporter.send(primary_ring, now)
-    letter_reporter.send(primary_letter, now)
+    if uart is not None:
+        packets = ring_reporter.packet(primary_ring, now) + letter_reporter.packet(primary_letter, now)
+        try:
+            uart.write(packets.encode())
+        except OSError as error:
+            print("Nicla UART write failed. Camera preview will continue:", error)
+            uart = None
 
     if report:
         print("RESULT:", result, "| FPS:", clock.fps())
