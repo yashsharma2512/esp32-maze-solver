@@ -21,7 +21,9 @@ class GroveVisionReader {
   void begin(int rxPin, int txPin) {
     if (state() != State::Idle) return;
     serial_.setRxBufferSize(2048);
-    if (!serial_.setPins(rxPin, txPin)) {
+    // GPIO34 is input-only and has no internal pull-up. The Grove TX line
+    // actively drives UART idle high, so leave the ESP32 RX pull disabled.
+    if (!serial_.enableRxInternalPull(false) || !serial_.setPins(rxPin, txPin)) {
       setState(State::TaskError);
       return;
     }

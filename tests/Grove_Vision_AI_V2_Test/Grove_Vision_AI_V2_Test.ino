@@ -90,7 +90,9 @@ void setup() {
   Serial.println("Grove Vision AI V2: Phi/Psi/Omega test");
 
   Serial2.setRxBufferSize(2048);
-  if (!Serial2.setPins(VISION_RX_PIN, VISION_TX_PIN)) {
+  // GPIO34 has no internal pull-up; the Grove TX line drives UART idle high.
+  if (!Serial2.enableRxInternalPull(false) ||
+      !Serial2.setPins(VISION_RX_PIN, VISION_TX_PIN)) {
     Serial.println("ERROR: could not assign UART pins 34/14.");
     return;
   }
