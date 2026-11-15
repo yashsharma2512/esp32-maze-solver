@@ -1,8 +1,9 @@
-# Nicla Vision reference and cognitive-target UART
+# Nicla Vision for PSO and cognitive targets
 
-The [OpenMV script](main.py) uses the existing ring color classifier and
-the onboard distance sensor to recognize Harmed, Stable, and Unharmed
-markers. The ESP32 receives the classification and position over UART.
+The [OpenMV script](main.py) recognizes Φ/Ψ/Ω letters and cognitive rings on
+the Nicla. It uses the width of each detected ring in the camera image to
+place the five sample points. The ESP32 receives classifications and positions
+over UART1.
 
 ## 1. Wire the camera
 
@@ -26,20 +27,22 @@ To run it at power-on, save the script as `main.py` on the Nicla's flash.
 
 ## 3. Check the ESP32 link before driving
 
-Upload the [Wi-Fi sketch](https://github.com/yashsharma2512/esp32-maze-solver/tree/main/wifi/MAZESOLVER_WIFI).
-At the startup prompt, send `camera` over USB Serial at 115200 baud
-with Newline selected, or from the Wi-Fi browser console.
+Upload your ESP32 sketch and open its console. The USB, BLE and Wi-Fi
+versions show confirmed detections while waiting to start and during a run.
+In the [Wi-Fi sketch](../../wifi/MAZESOLVER_WIFI/README.md), you can also send
+`camera` at startup over USB Serial at 115200 baud with Newline selected,
+or from the browser console.
 
 | Output | What to check |
 | --- | --- |
-| `Camera: linked, no target.` | The UART works. Present a marker and send `camera` again. |
-| `Camera: HARMED`, `STABLE`, or `UNHARMED` | Check the label and the reported x/y position against the preview. |
+| `Camera ring: linked, no target.` or `Camera PSO: linked, no target.` | The UART works. Present the corresponding target and send `camera` again. |
+| `COGNITIVE: HARMED`, `STABLE`, or `UNHARMED` | Check the color classification and the five sample markers in the preview. |
+| `PSO: PHI`, `PSI`, or `OMEGA` | Check the letter in the preview. |
 | `Camera: no recent Nicla packet.` | Check the script is running, then check J2 pin 3 to GPIO16 and the shared ground. |
 
-The existing `main.py` is an older H/S/U victim example. In the current robot
-sketches, Nicla stays connected on UART1 but its maze victim actions are
-disabled while the cognitive-target code is being prepared. Grove Vision AI V2
-reports the Greek-letter targets over the separate UART2.
-
-The older H/S/U approach routine remains in source as a reference but is not
-called during maze runs. The dropper servo remains disabled.
+Each frame sends one CSV line per detector with the type, milliseconds the
+type has been visible, and its x/y center in half-resolution coordinates.
+Type IDs `0`, `1`, `2` mean Stable, Unharmed, Harmed. IDs `3`, `4`, `5` mean
+Phi, Psi, Omega. IDs `-1` and `-2` clear the ring and letter results. The
+ESP32 confirms a detection after three matching frames. Detections are
+console reports only.

@@ -28,7 +28,7 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // #include "config/config_rdplite_v3.h"
 #include "config/config_esp32_dev.h"
 #include "as5600.h"
-#include "../../vision/GroveVisionAIV2/GroveVision.h"
+#include "../../vision/NiclaVision/NiclaVision.h"
 /////////////////////////////////////////////////////////////////////////////////
 
 unsigned long _tick = 0;

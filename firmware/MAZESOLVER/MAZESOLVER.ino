@@ -2,7 +2,7 @@
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
-GroveVisionReader groveVision;
+NiclaVisionReader niclaVision;
 
 void setup() {
   /* Initialize Serial module */
@@ -17,7 +17,6 @@ void setup() {
   /* Set motor outputs */
   beginMotorStop();
   setMotorIOs();
-  groveVision.begin(GROVE_RX_PIN, GROVE_TX_PIN);
   /* Initialize I2C module */
   beginWire();
 
@@ -124,7 +123,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    groveVision.service(SerialDebug);
+    niclaVision.service(Serial1, SerialDebug);
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */

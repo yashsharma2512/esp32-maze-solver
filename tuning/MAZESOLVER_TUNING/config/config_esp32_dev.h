@@ -3,7 +3,7 @@ constexpr int FLOW_TEST_STAGE = 4;
 // 1 = straight wall following, stop at a front wall
 // 2 = add the original front-wall turns and dead-end response
 // 3 = add side-opening maneuvers
-// 4 = run the full maze flow with click switches and Grove Greek-target reporting
+// 4 = run the full maze flow with click switches and Nicla target reporting
 static_assert(FLOW_TEST_STAGE >= 1 && FLOW_TEST_STAGE <= 4, "Choose a stage from 1 to 4.");
 
 constexpr int FRONT_WALL_THRESHOLD = 200;
@@ -85,9 +85,7 @@ constexpr uint8_t COLOR_CH = 2; // Bottom-facing AS7341 on TCA CH2
 //////////////////////////////////////////////////////////////////////
 #define LEFTCLICK 32    // Left clicker
 #define RIGHTCLICK 13   // Right clicker
-#define WALL_SELECT_PIN -1 // GPIO14 is Grove V2 TX; solveMaze defaults to left wall
-constexpr int GROVE_RX_PIN = 34;
-constexpr int GROVE_TX_PIN = 14;
+#define WALL_SELECT_PIN -1 // Wall selector disabled. Default to the left wall.
 //////////////////////////////////////////////////////////////////////
 
 

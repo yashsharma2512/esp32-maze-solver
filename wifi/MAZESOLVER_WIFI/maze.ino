@@ -63,8 +63,7 @@ void wallFollow(int wallToFollow) {
   updateProximitySensors();
   if (handleFloorColor()) return;
 
-  // Nicla UART remains wired for the cognitive-target code to be added later.
-  groveVision.service(SerialDebug);
+  niclaVision.service(Serial1, SerialDebug);
   if (motorStopRequested()) return;
 
   //IR

@@ -3,13 +3,12 @@
 Open [MAZESOLVER_BLE.ino](MAZESOLVER_BLE.ino) in Arduino IDE and select
 **ESP32 Dev Module**. Use the ESP32 board package's bundled BLE library and
 the usual **Adafruit NeoPixel**, **MPU6050_light**, **Adafruit AS7341**, and
-**Adafruit BusIO**, **Seeed Arduino SSCMA**, and **ArduinoJson** libraries.
+**Adafruit BusIO** libraries.
 Use the same `resetAngleZ()` helper in
 `MPU6050_light.h` as the regular maze sketch.
 
-Grove Vision AI V2 uses UART2 GPIO34/14 and reports confirmed Φ/Ψ/Ω targets
-over USB Serial and BLE. Nicla stays on UART1 GPIO16/17 for future cognitive
-targets. See the [Grove wiring and test](../../tests/Grove_Vision_AI_V2_Test/README.md).
+[Nicla Vision](../../vision/NiclaVision/README.md) uses GPIO16 (UART1 RX) and
+reports confirmed Φ/Ψ/Ω letters and cognitive rings over USB Serial and BLE.
 
 ## Connect from your phone
 

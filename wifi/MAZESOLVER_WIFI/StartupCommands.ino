@@ -14,7 +14,7 @@ public:
         const bool start = !tooLong && strcmp(line, "start") == 0;
         const bool calibrate = allowColorCalibration && !tooLong && length == 1 &&
                                (line[0] == 'c' || line[0] == 'C');
-        if (!tooLong && strcmp(line, "camera") == 0) printCameraStatus();
+        if (!tooLong && strcmp(line, "camera") == 0) niclaVision.printStatus(SerialDebug);
         length = 0;
         tooLong = false;
         if (calibrate) {
@@ -34,7 +34,7 @@ public:
 
 bool checkStartupInput(bool allowColorCalibration) {
   if (motorStopRequested()) return false;
-  readSerial();
+  niclaVision.service(Serial1, SerialDebug);
   SerialDebug.handleOta();
   static StartupCommandInput usb;
   static StartupCommandInput web;

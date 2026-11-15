@@ -67,7 +67,7 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  if (FLOW_TEST_STAGE == 4) groveVision.service(SerialDebug);
+  if (FLOW_TEST_STAGE == 4) niclaVision.service(Serial1, SerialDebug);
 
   //IR
   // interpretIR(false);
