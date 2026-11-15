@@ -40,8 +40,8 @@ red_led.off()
 green_led.off()
 blue_led.off()
 
-# UART4 uses the Nicla pads labeled SDA (TX) and SCL (RX).
-uart = UART(4, 115200)
+# LP1 uses Nicla J2 pin 3 (D1/TX) and pin 4 (D2/RX).
+uart = UART("LP1", 115200)
 
 # --------------------------------------------------------------------------
 # Distance sensor (ToF)

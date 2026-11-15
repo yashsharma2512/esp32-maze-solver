@@ -6,16 +6,16 @@ markers. The ESP32 receives the classification and position over UART.
 
 ## 1. Wire the camera
 
-Power both boards over USB for the first test. Use the Nicla Vision header
-with the pads labeled SDA and SCL. The script uses UART4 at 115200 baud.
+Power both boards over USB for the first test. The script uses the Nicla's
+LP1 UART at 115200 baud.
 
 | Nicla Vision | ESP32 Dev Module |
 | --- | --- |
-| **SDA** (UART4 TX) | **GPIO16** (UART RX) |
-| **GND** | **GND** |
+| **D1 / UART_TX** (J2 pin 3) | **GPIO16** (UART1 RX) |
+| **GND** (J2 pin 6) | **GND** |
 
-Only the Nicla transmits, so leave its SCL (UART4 RX) unconnected.
-[OpenMV UART pinout](https://docs.openmv.io/dev/openmvcam/quickref/arduino-nicla-vision.html#uart)
+Only the Nicla transmits, so leave its D2 / UART_RX (J2 pin 4) unconnected.
+[Arduino Nicla Vision pinout](https://docs.arduino.cc/resources/pinouts/ABX00051-full-pinout.pdf)
 
 ## 2. Run the camera by itself
 
@@ -34,7 +34,7 @@ with Newline selected, or from the Wi-Fi browser console.
 | --- | --- |
 | `Camera: linked, no target.` | The UART works. Present a marker and send `camera` again. |
 | `Camera: HARMED`, `STABLE`, or `UNHARMED` | Check the label and the reported x/y position against the preview. |
-| `Camera: no recent Nicla packet.` | Check the script is running, then check SDA to GPIO16 and the shared ground. |
+| `Camera: no recent Nicla packet.` | Check the script is running, then check J2 pin 3 to GPIO16 and the shared ground. |
 
 The existing `main.py` is an older H/S/U victim example. In the current robot
 sketches, Nicla stays connected on UART1 but its maze victim actions are

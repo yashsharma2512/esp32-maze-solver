@@ -55,7 +55,7 @@ The main, Wi-Fi, and BLE sketches and tuning stage 4 also use **Adafruit AS7341*
 | TB6612 STBY | GPIO33 |
 | Left, right click switches | GPIO32, GPIO13. Connect NO to the GPIO and COM to ground. |
 | Optional NeoPixel data | GPIO4 |
-| Nicla Vision, reserved for cognitive target | GPIO16 RX, GPIO17 TX (UART1) |
+| Nicla Vision, reserved for cognitive targets | Nicla J2 pin 3 (D1/TX) to ESP32 GPIO16 (UART1 RX), shared ground |
 | Grove Vision AI V2 Greek targets | GPIO34 RX, GPIO14 TX (UART2), regulated 5 V, common ground |
 
 For the Adafruit AS7341 breakout, connect VIN to 3.3 V.
