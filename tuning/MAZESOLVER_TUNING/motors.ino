@@ -275,6 +275,10 @@ void MoveStrightToDistance(float distance_mm) {  //distance in millimeters
   while (!motorStopRequested()) {
     mpu.update();
     updateProximitySensors();
+    if (FLOW_TEST_STAGE == 4 && direction > 0) {
+      serviceRescueTarget();
+      if (motorStopRequested()) break;
+    }
     float lft = abs(encLeft.getAngle());
     float rht = abs(encRight.getAngle());
     float err = requiredDegrees - (lft + rht) / 2;// add gyro assist

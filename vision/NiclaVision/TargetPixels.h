@@ -11,6 +11,11 @@ class NiclaTargetPixels {
 
   uint32_t statusColor() const { return statusColor_; }
 
+  void showRescueTarget(Adafruit_NeoPixel &strip, int type) const {
+    const uint32_t color = targetColor(type);
+    showPair(strip, color, color);
+  }
+
   void showTargets(Adafruit_NeoPixel &strip, int ringType, int letterType) const {
     const uint32_t ringColor = targetColor(ringType);
     const uint32_t letterColor = targetColor(letterType);

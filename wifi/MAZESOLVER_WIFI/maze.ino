@@ -63,7 +63,7 @@ void wallFollow(int wallToFollow) {
   updateProximitySensors();
   if (handleFloorColor()) return;
 
-  serviceCameraTargets();
+  if (serviceRescueTarget()) return;
   if (motorStopRequested()) return;
 
   //IR

@@ -4,7 +4,6 @@
 
 #define DEBUG
 
-// #include <Servo.h>
 #include <Wire.h>
 #include <MPU6050_light.h>
 #include <Adafruit_NeoPixel.h>
@@ -14,9 +13,6 @@
 #define LED_PIN 4
 #define LED_COUNT 2
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-// Servo dropper;
-#define dropperAngle 85
 
 #define RX_PIN 35  // Nicla TX connects here.
 #define TX_PIN 17

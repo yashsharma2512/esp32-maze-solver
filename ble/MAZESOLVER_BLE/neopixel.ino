@@ -10,7 +10,14 @@ void showColor(uint32_t color) {
 
 void serviceCameraTargets() {
   niclaVision.service(Serial1, SerialDebug);
+  if (rescueSequence.active()) return;
   updateFloorFlash();
   if (floorFlashActive) return;
   targetPixels.showTargets(strip, niclaVision.confirmedRing(), niclaVision.confirmedLetter());
+}
+
+bool serviceRescueTarget() {
+  serviceCameraTargets();
+  if (floorFlashActive) return false;
+  return rescueSequence.handle(niclaVision, targetPixels, strip, SerialDebug);
 }

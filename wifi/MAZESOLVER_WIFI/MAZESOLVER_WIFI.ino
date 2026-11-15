@@ -1,9 +1,10 @@
 #include "header.h"
-#include "../../vision/NiclaVision/TargetPixels.h"
+#include "../../vision/NiclaVision/RescueSequence.h"
 
 bool IR_CALIBRATE = false;
 NiclaVisionReader niclaVision;
 NiclaTargetPixels targetPixels;
+RescueSequence rescueSequence;
 
 void setup() {
   /* Initialize Serial module */
@@ -36,10 +37,6 @@ void setup() {
 
   pinMode(LEFTCLICK, INPUT_PULLUP);
   pinMode(RIGHTCLICK, INPUT_PULLUP);
-
-  // dropper.attach(2);
-  // delay(500);
-  // dropper.write(85);
 
   moveMotor(0, 0);
 

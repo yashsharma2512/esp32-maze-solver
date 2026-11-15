@@ -67,7 +67,7 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  if (FLOW_TEST_STAGE == 4) serviceCameraTargets();
+  if (FLOW_TEST_STAGE == 4 && serviceRescueTarget()) return;
 
   //IR
   // interpretIR(false);

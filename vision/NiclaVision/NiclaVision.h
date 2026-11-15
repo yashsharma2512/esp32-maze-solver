@@ -48,6 +48,13 @@ class NiclaVisionReader {
   int confirmedRing() const { return confirmedType(ring_); }
   int confirmedLetter() const { return confirmedType(letter_); }
 
+  int rescueTarget() const {
+    const int ring = readyForRescue(ring_);
+    return ring >= 0 ? ring : readyForRescue(letter_);
+  }
+
+  bool targetsCleared() const { return cleared(ring_) && cleared(letter_); }
+
   void printStatus(Print &output) const {
     output.printf("Camera UART: %lu bytes received, %lu packets accepted since boot.\n",
                   receivedBytes_, acceptedPackets_);
@@ -92,6 +99,16 @@ class NiclaVisionReader {
     return target.type >= 0 && target.frames >= confirmFrames_ && fresh(target) ? target.type : -1;
   }
 
+  static int readyForRescue(const Target &target) {
+    // The original approach routine used x > 70 and a half-second stable target.
+    return target.x > 70 && target.age >= 500 ? confirmedType(target) : -1;
+  }
+
+  static bool cleared(const Target &target) {
+    return fresh(target) && target.type < 0 && target.frames >= confirmFrames_;
+  }
+
+ public:
   static const char *name(int type) {
     switch (type) {
       case 0: return "STABLE";
@@ -104,6 +121,7 @@ class NiclaVisionReader {
     }
   }
 
+ private:
   // Existing CSV packet: type,stable_ms,x,y. -1 clears rings, -2 clears PSO.
   void parseLine(unsigned long now) {
     const char *field = line_;

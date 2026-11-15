@@ -66,3 +66,34 @@ shows the ring and the second shows the letter. The usual status color returns
 after the target disappears. In the Wi-Fi and BLE sketches, floor-tile flashes
 take priority while they are active. Camera indications work at the startup
 prompt for a bench test.
+
+## 5. Set up the rescue dropper
+
+During forward driving, the robot stops when a confirmed target has been
+visible for at least 500 ms and its reported x-position is greater than 70.
+Both NeoPixels then show the target's color while the dropper cycles. The
+robot resumes its maze run after the sequence. A manual `stop` interrupts
+dispensing. Both camera streams must report a clear scene before another
+target can trigger the sequence. The x-position is an image coordinate, so
+check the actual kit landing distance on the course.
+
+| Target | Kits |
+| --- | ---: |
+| Harmed ring or Phi | 2 |
+| Stable ring or Psi | 1 |
+| Unharmed ring or Omega | 0 |
+
+1. Connect the servo signal to **ESP32 GPIO2**, the proposed pin in the
+   original sketch. Power the servo from a regulated supply rated for it and
+   connect the supply ground to the ESP32 ground.
+2. Keep motor power off and upload
+   [Dropper_Calibration.ino](../../tests/Dropper_Calibration/Dropper_Calibration.ino)
+   with **ESP32 Dev Module** selected. Open Serial Monitor at **115200 baud**
+   with **Newline** selected.
+3. With the hopper empty, find the closed position and move in small steps
+   to find the release position. The original parked value was `85`. Send
+   `off` to stop the PWM output. Then test that one release-and-return cycle
+   dispenses exactly one kit.
+4. Put your two measured angles in [DropperConfig.h](DropperConfig.h) and
+   upload the normal maze sketch. `DROPPER_RELEASE_DEG = -1` keeps servo
+   movement disabled during rescue until you set the calibrated value.
