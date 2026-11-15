@@ -63,7 +63,7 @@ void wallFollow(int wallToFollow) {
   updateProximitySensors();
   if (handleFloorColor()) return;
 
-  niclaVision.service(Serial1, SerialDebug);
+  serviceCameraTargets();
   if (motorStopRequested()) return;
 
   //IR

@@ -67,7 +67,7 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  niclaVision.service(Serial1, SerialDebug);
+  serviceCameraTargets();
 
   //IR
   // interpretIR(false);

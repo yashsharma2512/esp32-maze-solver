@@ -38,7 +38,7 @@ public:
 
 bool checkStartupInput(bool allowColorCalibration) {
   if (motorStopRequested()) return false;
-  niclaVision.service(Serial1, SerialDebug);
+  serviceCameraTargets();
   static StartupCommandInput usb;
   static StartupCommandInput ble;
   if (usb.startRequested(0, allowColorCalibration)) return true;

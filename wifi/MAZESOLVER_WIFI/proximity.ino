@@ -96,7 +96,7 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
   while (!motorStopRequested() && (millis() - _curr) < ms) {
     mpu.update();
     updateProximitySensors();
-    niclaVision.service(Serial1, SerialDebug);
+    serviceCameraTargets();
   }
 }
 

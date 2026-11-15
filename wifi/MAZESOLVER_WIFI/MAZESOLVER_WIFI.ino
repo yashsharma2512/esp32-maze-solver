@@ -1,7 +1,9 @@
 #include "header.h"
+#include "../../vision/NiclaVision/TargetPixels.h"
 
 bool IR_CALIBRATE = false;
 NiclaVisionReader niclaVision;
+NiclaTargetPixels targetPixels;
 
 void setup() {
   /* Initialize Serial module */
@@ -135,7 +137,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    niclaVision.service(Serial1, SerialDebug);
+    serviceCameraTargets();
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */
@@ -146,6 +148,7 @@ void setup() {
 void loop() {
   if (motorStopRequested()) {
     if (!motorResumeRequested()) {
+      serviceCameraTargets();
       delay(10);
       return;
     }

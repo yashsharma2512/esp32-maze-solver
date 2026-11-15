@@ -51,4 +51,18 @@ type has been visible, and its x/y center in half-resolution coordinates.
 Type IDs `0`, `1`, `2` mean Stable, Unharmed, Harmed. IDs `3`, `4`, `5` mean
 Phi, Psi, Omega. IDs `-1` and `-2` clear the ring and letter results. The
 ESP32 confirms a detection after three matching frames. Detections are
-console reports only.
+reported in the console and shown on the robot's NeoPixels.
+
+## 4. Read the target colors
+
+| Cognitive ring | NeoPixel | Greek letter | NeoPixel |
+| --- | --- | --- | --- |
+| Harmed | Red | Φ (Phi) | Magenta |
+| Stable | Yellow | Ψ (Psi) | Cyan |
+| Unharmed | Lime green | Ω (Omega) | Blue |
+
+A single target uses both pixels. With both types visible, the first pixel
+shows the ring and the second shows the letter. The usual status color returns
+after the target disappears. In the Wi-Fi and BLE sketches, floor-tile flashes
+take priority while they are active. Camera indications work at the startup
+prompt for a bench test.

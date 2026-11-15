@@ -1,8 +1,10 @@
 #include "header.h"
+#include "../../vision/NiclaVision/TargetPixels.h"
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
 NiclaVisionReader niclaVision;
+NiclaTargetPixels targetPixels;
 
 void stopFlowTest(const char *reason, int reading) {
   moveMotor(0, 0);
@@ -136,7 +138,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    if (FLOW_TEST_STAGE == 4) niclaVision.service(Serial1, SerialDebug);
+    if (FLOW_TEST_STAGE == 4) serviceCameraTargets();
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */
@@ -147,6 +149,7 @@ void setup() {
 void loop() {
   if (motorStopRequested()) {
     if (!motorResumeRequested()) {
+      if (FLOW_TEST_STAGE == 4) serviceCameraTargets();
       delay(10);
       return;
     }

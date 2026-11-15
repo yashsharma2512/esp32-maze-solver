@@ -18,7 +18,7 @@ void updateFloorFlash() {
 }
 
 void flashFloorColor(uint32_t color) {
-  if (!floorFlashActive) colorBeforeFlash = strip.getPixelColor(0);
+  if (!floorFlashActive) colorBeforeFlash = targetPixels.statusColor();
   showColor(color);
   floorFlashStarted = millis();
   floorFlashActive = true;

@@ -97,14 +97,14 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
   while (!motorStopRequested() && (millis() - _curr) < ms) {
     mpu.update();
     updateProximitySensors();
-    if (FLOW_TEST_STAGE == 4) niclaVision.service(Serial1, SerialDebug);
+    if (FLOW_TEST_STAGE == 4) serviceCameraTargets();
   }
 }
 
 void waitForUserInput1() {
   while (!motorStopRequested()) {
     if (FLOW_TEST_STAGE == 4) {
-      niclaVision.service(Serial1, SerialDebug);
+      serviceCameraTargets();
       checkColorCalibration();
     }
     updateProximitySensors();
@@ -129,7 +129,7 @@ void waitForUserInput2() {
   while (!motorStopRequested()) {
     updateProximitySensors();
     mpu.update();
-    if (FLOW_TEST_STAGE == 4) niclaVision.service(Serial1, SerialDebug);
+    if (FLOW_TEST_STAGE == 4) serviceCameraTargets();
     if (dr > 150)
       break;
     if (__arr[i] >= 0) digitalWrite(__arr[i], _logic[i]);

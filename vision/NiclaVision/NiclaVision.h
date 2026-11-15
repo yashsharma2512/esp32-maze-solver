@@ -45,6 +45,9 @@ class NiclaVisionReader {
     report(letter_, "PSO", output);
   }
 
+  int confirmedRing() const { return confirmedType(ring_); }
+  int confirmedLetter() const { return confirmedType(letter_); }
+
   void printStatus(Print &output) const {
     output.printf("Camera UART: %lu bytes received, %lu packets accepted since boot.\n",
                   receivedBytes_, acceptedPackets_);
@@ -83,6 +86,10 @@ class NiclaVisionReader {
 
   static bool fresh(const Target &target) {
     return target.received && millis() - target.lastPacket <= timeoutMs_;
+  }
+
+  static int confirmedType(const Target &target) {
+    return target.type >= 0 && target.frames >= confirmFrames_ && fresh(target) ? target.type : -1;
   }
 
   static const char *name(int type) {
@@ -145,8 +152,7 @@ class NiclaVisionReader {
   }
 
   static void report(Target &target, const char *label, Print &output) {
-    if (target.type < 0 || target.frames < confirmFrames_ || target.type == target.reportedType ||
-        !fresh(target)) return;
+    if (confirmedType(target) < 0 || target.type == target.reportedType) return;
     target.reportedType = target.type;
     printTarget(target, label, output);
   }
