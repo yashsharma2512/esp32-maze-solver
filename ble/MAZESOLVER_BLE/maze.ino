@@ -1,13 +1,14 @@
 void solveMaze() {
 #if defined(LEFTWALLFOLLOW) && !defined(RIGHTWALLFOLLOW) && !defined(DFS) && !defined(FLOODFILL)
   _tick = micros();
-  pinMode(WALL_SELECT_PIN, INPUT_PULLUP);
-  if (!digitalRead(WALL_SELECT_PIN))
-    while (!motorStopRequested())
-      wallFollow(RIGHT);
-  else
-    while (!motorStopRequested())
-      wallFollow(LEFT);
+  if (WALL_SELECT_PIN >= 0) {
+    pinMode(WALL_SELECT_PIN, INPUT_PULLUP);
+    if (!digitalRead(WALL_SELECT_PIN)) {
+      while (!motorStopRequested()) wallFollow(RIGHT);
+      return;
+    }
+  }
+  while (!motorStopRequested()) wallFollow(LEFT);
 #elif !defined(LEFTWALLFOLLOW) && defined(RIGHTWALLFOLLOW) && !defined(DFS) && !defined(FLOODFILL)
   while (!motorStopRequested())
     WallFollow(RIGHT);
@@ -67,7 +68,8 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  victimDetection();
+  // Nicla UART remains wired for the cognitive-target code to be added later.
+  groveVision.service(SerialDebug);
 
   //IR
   // interpretIR(false);

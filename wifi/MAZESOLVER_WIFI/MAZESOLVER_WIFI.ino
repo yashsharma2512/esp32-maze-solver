@@ -1,6 +1,7 @@
 #include "header.h"
 
 bool IR_CALIBRATE = false;
+GroveVisionReader groveVision;
 
 void setup() {
   /* Initialize Serial module */
@@ -15,6 +16,7 @@ void setup() {
   /* Set motor outputs */
   setMotorIOs();
   SerialDebug.begin();
+  groveVision.begin(GROVE_RX_PIN, GROVE_TX_PIN);
   /* Initialize I2C module */
   beginWire();
 
@@ -66,7 +68,7 @@ void setup() {
 
   showColor(strip.Color(0, 0, 100));
   SerialDebug.println("Show a hand to the left APDS or send start with a newline.");
-  SerialDebug.println("Send camera to check the Nicla Vision link before starting.");
+  SerialDebug.println("Nicla UART reserved for the cognitive-target code; Grove V2 detects Greek victims.");
   bool serialStart = waitForUserInput1();
   // A stop during startup holds the robot here until start is received.
   while (motorStopRequested()) {
@@ -133,7 +135,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    victimDetection();
+    groveVision.service(SerialDebug);
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */

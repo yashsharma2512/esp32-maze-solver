@@ -2,6 +2,7 @@
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
+GroveVisionReader groveVision;
 
 void setup() {
   /* Initialize Serial module */
@@ -17,6 +18,7 @@ void setup() {
   beginMotorStop();
   setMotorIOs();
   SerialDebug.begin();
+  groveVision.begin(GROVE_RX_PIN, GROVE_TX_PIN);
   /* Initialize I2C module */
   beginWire();
 
@@ -132,7 +134,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    victimDetection();
+    groveVision.service(SerialDebug);
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */

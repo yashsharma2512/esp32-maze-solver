@@ -1,4 +1,4 @@
-# Nicla Vision victim camera
+# Nicla Vision reference and cognitive-target UART
 
 The [OpenMV script](main.py) uses the existing ring color classifier and
 the onboard distance sensor to recognize Harmed, Stable, and Unharmed
@@ -36,8 +36,10 @@ with Newline selected, or from the Wi-Fi browser console.
 | `Camera: HARMED`, `STABLE`, or `UNHARMED` | Check the label and the reported x/y position against the preview. |
 | `Camera: no recent Nicla packet.` | Check the script is running, then check SDA to GPIO16 and the shared ground. |
 
-When running the maze, the original victim approach and five NeoPixel
-flashes use red for Harmed, green for Stable, and amber for Unharmed.
-The dropper servo remains disabled. To test normal maze movement with
-victim actions disabled, set `CAMERA_VICTIM_ACTIONS` to `false` in the
-[ESP32 config](https://github.com/yashsharma2512/esp32-maze-solver/blob/main/wifi/MAZESOLVER_WIFI/config/config_esp32_dev.h).
+The existing `main.py` is an older H/S/U victim example. In the current robot
+sketches, Nicla stays connected on UART1 but its maze victim actions are
+disabled while the cognitive-target code is being prepared. Grove Vision AI V2
+reports the Greek-letter targets over the separate UART2.
+
+The older H/S/U approach routine remains in source as a reference but is not
+called during maze runs. The dropper servo remains disabled.

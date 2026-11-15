@@ -18,9 +18,10 @@ For BLE serial and the `start` command, open the separate BLE sketch.
 
 The Wi-Fi sketch hosts a browser console in AP+STA mode and accepts OTA
 uploads during startup. [Wi-Fi setup and OTA](wifi/MAZESOLVER_WIFI/README.md)
-For the victim camera, use the [Nicla Vision setup](vision/NiclaVision/README.md).
-For a Grove Vision AI V2 with Greek-letter victims, use the
-[separate Φ/Ψ/Ω camera test](tests/Grove_Vision_AI_V2_Test/README.md).
+The Grove Vision AI V2 reports Φ/Ψ/Ω targets to the robot over UART2. Use the
+[Grove wiring and camera test](tests/Grove_Vision_AI_V2_Test/README.md) before
+running the maze. The [Nicla Vision](vision/NiclaVision/README.md) remains on
+UART1 for cognitive targets; its maze actions await the new Nicla code.
 
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
@@ -34,8 +35,8 @@ sketch uses this helper in the public section of the library's
 
     void resetAngleZ() { angleZ = 0; }
 
-The main, Wi-Fi, and BLE sketches and tuning stage 4 also use **Adafruit AS7341**
-and **Adafruit BusIO**.
+The main, Wi-Fi, and BLE sketches and tuning stage 4 also use **Adafruit AS7341**,
+**Adafruit BusIO**, **Seeed Arduino SSCMA**, and **ArduinoJson**.
 
 ## Wiring
 
@@ -52,7 +53,8 @@ and **Adafruit BusIO**.
 | TB6612 STBY | GPIO33 |
 | Left, right click switches | GPIO32, GPIO13. Connect NO to the GPIO and COM to ground. |
 | Optional NeoPixel data | GPIO4 |
-| Optional victim-detection UART | GPIO16 RX, GPIO17 TX |
+| Nicla Vision, reserved for cognitive target | GPIO16 RX, GPIO17 TX (UART1) |
+| Grove Vision AI V2 Greek targets | GPIO34 RX, GPIO14 TX (UART2), regulated 5 V, common ground |
 
 For the Adafruit AS7341 breakout, connect VIN to 3.3 V.
 [AS7341 pinout](https://learn.adafruit.com/adafruit-as7341-10-channel-light-color-sensor-breakout/pinouts)

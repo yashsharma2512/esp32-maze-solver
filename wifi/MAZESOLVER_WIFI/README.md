@@ -2,7 +2,8 @@
 
 Open [MAZESOLVER_WIFI.ino](MAZESOLVER_WIFI.ino) in Arduino IDE and select
 **ESP32 Dev Module**. Install **Adafruit NeoPixel**, **MPU6050_light**,
-**Adafruit AS7341**, and **Adafruit BusIO**. Use the same `resetAngleZ()`
+**Adafruit AS7341**, **Adafruit BusIO**, **Seeed Arduino SSCMA**, and
+**ArduinoJson**. Use the same `resetAngleZ()`
 helper in `MPU6050_light.h` as the regular maze sketch.
 
 ## Connect to the browser console
@@ -36,8 +37,10 @@ Send `reset` from either console to reboot the ESP32. The browser console
 disconnects briefly. Rejoin the hotspot if needed, then use the normal
 startup sequence. Saved floor-color references stay in EEPROM.
 
-Send `camera` from either console before `start` to check the Nicla UART
-and the current victim classification. [Nicla Vision wiring and setup](https://github.com/yashsharma2512/esp32-maze-solver/tree/main/vision/NiclaVision)
+The Nicla stays on UART1 GPIO16/17 for future cognitive-target code. Its old
+H/S/U victim movement routine is disabled. Grove V2 uses UART2 GPIO34/14;
+confirmed Φ/Ψ/Ω detections appear in the USB and browser logs. See the
+[Grove wiring and test](../../tests/Grove_Vision_AI_V2_Test/README.md).
 
 ## Upload updates over Wi-Fi
 

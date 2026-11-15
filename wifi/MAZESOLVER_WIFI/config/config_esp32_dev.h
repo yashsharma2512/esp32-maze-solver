@@ -2,7 +2,6 @@
 constexpr int FRONT_WALL_THRESHOLD = 200;
 constexpr int OPENING_ADVANCE_MM = 200;
 constexpr int TURN_BACKUP_MM = 30;
-constexpr bool CAMERA_VICTIM_ACTIONS = true; // Set false for a maze run with camera actions disabled.
 
 //////////////////////////////////////////////////////////////////////
 // Select a maze solving algorithm. Select only one, comment the rest
@@ -80,7 +79,9 @@ constexpr float FLOOR_COLOR_MATCH_TOLERANCE = 0.30f;
 //////////////////////////////////////////////////////////////////////
 #define LEFTCLICK 32    // Left clicker
 #define RIGHTCLICK 13   // Right clicker
-#define WALL_SELECT_PIN 14 // Optional selector for solveMaze()
+#define WALL_SELECT_PIN -1 // GPIO14 is Grove V2 TX; solveMaze defaults to left wall
+constexpr int GROVE_RX_PIN = 34;
+constexpr int GROVE_TX_PIN = 14;
 //////////////////////////////////////////////////////////////////////
 
 

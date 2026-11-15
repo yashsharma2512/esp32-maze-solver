@@ -7,6 +7,11 @@ libraries, and the hand-gesture start sequence.
 The [ESP32 config](config/config_esp32_dev.h) contains the settings for the
 complete maze routine.
 
+Grove Vision AI V2 uses UART2 GPIO34/14 and reports confirmed Φ/Ψ/Ω targets
+over USB Serial during a run. Nicla Vision stays on UART1 GPIO16/17 for the
+future cognitive-target script. See the
+[Grove wiring and test](../../tests/Grove_Vision_AI_V2_Test/README.md).
+
 | Setting | What it controls |
 | --- | --- |
 | `APDS_PROXIMITY_GAIN` | APDS proximity sensitivity (1×, 2×, 4×, or 8×); currently 2× |

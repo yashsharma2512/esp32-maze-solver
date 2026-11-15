@@ -78,7 +78,9 @@ constexpr uint8_t COLOR_CH = 2; // Bottom-facing AS7341 on TCA CH2
 //////////////////////////////////////////////////////////////////////
 #define LEFTCLICK 32    // Left clicker
 #define RIGHTCLICK 13   // Right clicker
-#define WALL_SELECT_PIN 14 // Optional selector for solveMaze()
+#define WALL_SELECT_PIN -1 // GPIO14 is Grove V2 TX; solveMaze defaults to left wall
+constexpr int GROVE_RX_PIN = 34;
+constexpr int GROVE_TX_PIN = 14;
 //////////////////////////////////////////////////////////////////////
 
 

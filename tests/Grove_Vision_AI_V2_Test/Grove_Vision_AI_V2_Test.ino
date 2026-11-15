@@ -2,9 +2,9 @@
 #include <ArduinoJson.h>
 #include <Seeed_Arduino_SSCMA.h>
 
-// ESP32 DevKit pins already reserved for the robot's victim camera.
-constexpr int VISION_RX_PIN = 16;  // Grove V2 D6/TX -> ESP32 RX
-constexpr int VISION_TX_PIN = 17;  // ESP32 TX -> Grove V2 D7/RX
+// UART2 keeps the Nicla on UART1 GPIO16/17 for future cognitive targets.
+constexpr int VISION_RX_PIN = 34;  // Grove V2 D6/TX -> ESP32 RX
+constexpr int VISION_TX_PIN = 14;  // ESP32 TX -> Grove V2 D7/RX
 constexpr int MOTOR_STBY_PIN = 33;
 constexpr uint8_t MIN_SCORE = 75;  // SSCMA confidence is 0..100.
 constexpr uint8_t CONFIRM_FRAMES = 3;
@@ -89,12 +89,12 @@ void setup() {
   delay(300);
   Serial.println("Grove Vision AI V2: Phi/Psi/Omega test");
 
-  Serial1.setRxBufferSize(2048);
-  if (!Serial1.setPins(VISION_RX_PIN, VISION_TX_PIN)) {
-    Serial.println("ERROR: could not assign UART pins 16/17.");
+  Serial2.setRxBufferSize(2048);
+  if (!Serial2.setPins(VISION_RX_PIN, VISION_TX_PIN)) {
+    Serial.println("ERROR: could not assign UART pins 34/14.");
     return;
   }
-  while (!vision.begin(&Serial1)) {
+  while (!vision.begin(&Serial2)) {
     Serial.println("Grove V2 not responding. Check 5V, GND, D6/TX, D7/RX.");
     delay(2000);
   }

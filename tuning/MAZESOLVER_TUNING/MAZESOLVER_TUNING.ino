@@ -2,6 +2,7 @@
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
+GroveVisionReader groveVision;
 
 void stopFlowTest(const char *reason, int reading) {
   moveMotor(0, 0);
@@ -24,6 +25,7 @@ void setup() {
   /* Set motor outputs */
   beginMotorStop();
   setMotorIOs();
+  if (FLOW_TEST_STAGE == 4) groveVision.begin(GROVE_RX_PIN, GROVE_TX_PIN);
   /* Initialize I2C module */
   beginWire();
 
@@ -134,7 +136,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    victimDetection();
+    groveVision.service(SerialDebug);
   }
 
   /* test the rotation accuracy using diagonal sensors. comment to disable testing. */

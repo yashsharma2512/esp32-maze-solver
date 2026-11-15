@@ -37,7 +37,7 @@ the color sensor. See the [color calibration guide](../../firmware/MAZESOLVER/RE
 | 1 | Straight wall on the left, open right side, then a wall ahead. The robot stops at the front wall. | Use filtered L at the desired gap for leftWallOffset. Compare readings with and without a wall before changing wallSense. Check P and D before tuning kp_move or kd_move. Use F to tune FRONT_WALL_THRESHOLD. |
 | 2 | Block the front with one side open. Repeat with the other side open, then try a dead end. | Compare the measured turn angle against 90 degrees before changing kp_turn or kd_turn. Check TURN_BACKUP_MM on the floor. |
 | 3 | Add a single left opening with clear space ahead. Mark where the pivot starts and ends. | Check OPENING_ADVANCE_MM and TURN_BACKUP_MM. Check encoder distance scaling first if both moves measure wrong. |
-| 4 | Run the complete route with the original click-switch and victim-detection paths enabled. The AS7341 illumination LED is on. | Verify how the features interact using the settings from the earlier stages. |
+| 4 | Run the complete route with click switches, Grove V2 Greek-target reporting, and the AS7341 illumination LED. | Verify how the features interact using the settings from the earlier stages. Nicla cognitive actions await their camera code. |
 
 Tune one value per run. In stages 1 through 3 an APDS read failure stops the
 test and reports the channel. Fix a repeated failure before driving on the floor.
