@@ -26,6 +26,8 @@ UART1 for cognitive targets; its maze actions await the new Nicla code.
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
 set distance using both encoders and shows their counts and calculated travel.
+To check all three proximity sensors together, use the
+[motor-safe APDS test](tests/All_APDS_Test/README.md).
 
 ## Libraries
 
