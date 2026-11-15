@@ -1,13 +1,13 @@
 # Nicla Vision for PSO and cognitive targets
 
-The [OpenMV script](main.py) recognizes Φ/Ψ/Ω letters and cognitive rings on
-the Nicla. It uses the width of each detected ring in the camera image to
-place the five sample points. The ESP32 receives classifications and positions
-over UART1.
+Run [main.py](main.py) in OpenMV to test Φ/Ψ/Ω letters and cognitive rings with
+the working camera script. It places the five sample points using the detected
+ring width. The ToF reading is printed for debugging. Run
+[robot_uart.py](robot_uart.py) when testing the ESP32 UART link.
 
 ## 1. Wire the camera
 
-Power both boards over USB for the first test. The script uses the Nicla's
+Power both boards over USB for the first test. The UART script uses the Nicla's
 external UART at 115200 baud. In OpenMV it opens as `machine.UART(9, 115200)`.
 [Arduino Nicla Vision UART guide](https://docs.arduino.cc/tutorials/nicla-vision/user-manual/#uart)
 
@@ -23,15 +23,17 @@ Only the Nicla transmits, so leave its D2 / UART_RX (J2 pin 4) unconnected.
 
 Open `main.py` in OpenMV IDE, connect the Nicla, and press Run. Place a
 victim marker in front of the camera and check the label in the preview.
-To run it at power-on, save the script as `main.py` on the Nicla's flash.
-If UART setup or writing fails, the IDE prints the error and keeps the camera
-preview and detectors running.
+This test displays results in OpenMV.
 [Getting started with OpenMV on Nicla Vision](https://docs.arduino.cc/tutorials/nicla-vision/getting-started/)
 
 ## 3. Check the ESP32 link before driving
 
-Upload your ESP32 sketch and open its console. The USB, BLE and Wi-Fi
-versions show confirmed detections while waiting to start and during a run.
+Run `robot_uart.py` in OpenMV for the robot link. It prints a message when
+UART initializes or fails. To boot into that mode, save `robot_uart.py` as
+`main.py` on the Nicla's flash.
+
+Upload your ESP32 sketch and open its console. The USB, BLE and Wi-Fi versions
+show confirmed detections while waiting to start and during a run.
 In the [Wi-Fi sketch](../../wifi/MAZESOLVER_WIFI/README.md), you can also send
 `camera` at startup over USB Serial at 115200 baud with Newline selected,
 or from the browser console.

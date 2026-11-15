@@ -142,41 +142,27 @@ LOG_INTERVAL_MS = 1000
 LETTER_CODES = {"PHI": "P", "PSI": "S", "OMEGA": "O"}
 
 
-# Keep the existing ring IDs and add the three Greek letter IDs.
-RING_IDS = {2: 2, 1: 0, 0: 1}
-LETTER_IDS = {"PHI": 3, "PSI": 4, "OMEGA": 5}
-NO_RING = -1
-NO_LETTER = -2
-
-
-def open_camera_uart():
-    # Arduino's OpenMV UART mapping uses bus 9 on Nicla J2 pins 3 and 4.
+def open_range_sensor():
     try:
-        from machine import UART
-        return UART(9, 115200)
-    except (ImportError, OSError, TypeError, ValueError) as error:
-        print("Nicla UART unavailable. Camera preview will continue:", error)
+        from machine import I2C
+        from vl53l1x import VL53L1X
+
+        return VL53L1X(I2C(2))
+    except (ImportError, OSError, RuntimeError) as error:
+        print("COGNITIVE: ToF unavailable", error)
         return None
 
 
-class TargetReporter:
-    def __init__(self, clear_id):
-        self.clear_id = clear_id
-        self.previous_type = clear_id
-        self.changed_at = time.ticks_ms()
-
-    def packet(self, target, now):
-        if target is None:
-            target_type, x, y = self.clear_id, -1, -1
-        else:
-            target_type, x, y = target
-            x //= RING_SEARCH_DIVISOR
-            y //= RING_SEARCH_DIVISOR
-        if target_type != self.previous_type:
-            self.previous_type = target_type
-            self.changed_at = now
-        age = time.ticks_diff(now, self.changed_at) if target is not None else 0
-        return "%d,%d,%d,%d\n" % (target_type, age, x, y)
+def read_ring_distance(tof):
+    if tof is None:
+        return None
+    try:
+        distance = tof.read()
+    except OSError:
+        return None
+    if distance is None or distance <= 0:
+        return None
+    return distance
 
 
 def ring_color(img, x, y):
@@ -289,21 +275,14 @@ def detect_letters(img, preview):
         preview.draw_string((x, max(0, y - 18)), letter, scale=2)
         result += LETTER_CODES[letter]
 
-    primary = None
-    if detected:
-        _, _, _, _, cx, cy, letter = max(detected, key=lambda target: target[2] * target[3])
-        primary = LETTER_IDS[letter], cx, cy
-    return result, primary
+    return result
 
 
-ring_reporter = TargetReporter(NO_RING)
-letter_reporter = TargetReporter(NO_LETTER)
+tof = open_range_sensor()
+print("COGNITIVE: sampling from measured blob width")
 ring_search = camera.snapshot().copy(x_scale=RING_SEARCH_SCALE, y_scale=RING_SEARCH_SCALE)
 gray_buffer = None
 last_log = time.ticks_ms()
-uart = open_camera_uart()
-if uart is not None:
-    print("Nicla: PSO and cognitive ready on UART9 at 115200")
 
 while True:
     clock.tick()
@@ -313,6 +292,7 @@ while True:
     # Read ring colors first, while the frame is still RGB.
     rgb = camera.snapshot()
     rings = find_ring_candidates(rgb, ring_search)
+    distance = read_ring_distance(tof) if report else None
 
     if rings:
         # Keep the live RGB preview and reuse a grayscale buffer for PSO.
@@ -332,10 +312,8 @@ while True:
     # regions before looking for letters.
     for rect, _ in rings:
         img.draw_rectangle(rect, color=0, fill=True)
-    result, primary_letter = detect_letters(img, preview)
+    result = detect_letters(img, preview)
 
-    primary_ring = None
-    largest_ring_area = 0
     for rect, reading in rings:
         colors, points, sample_y = reading
         score = sum(RING_VALUES[color] for color in colors)
@@ -351,21 +329,11 @@ while True:
             preview.draw_circle((cx, cy, 4), color=(0, 0, 0), thickness=2)
             preview.draw_circle((cx, cy, 3), color=(255, 255, 255), thickness=1)
 
-        x, y, w, h = rect
-        if score in RING_IDS and w * h > largest_ring_area:
-            largest_ring_area = w * h
-            primary_ring = RING_IDS[score], x + w // 2, y + h // 2
+        x, y = rect[:2]
         preview.draw_rectangle(rect, thickness=2)
         preview.draw_string((x, max(0, y - 18)), status, scale=2)
 
-    if uart is not None:
-        packets = ring_reporter.packet(primary_ring, now) + letter_reporter.packet(primary_letter, now)
-        try:
-            uart.write(packets.encode())
-        except OSError as error:
-            print("Nicla UART write failed. Camera preview will continue:", error)
-            uart = None
-
     if report:
-        print("RESULT:", result, "| FPS:", clock.fps())
+        tof_status = distance if distance is not None else "NO VALID RANGE"
+        print("RESULT:", result, "| FPS:", clock.fps(), "| ToF mm:", tof_status)
         last_log = now

@@ -18,9 +18,9 @@ For BLE serial and the `start` command, open the separate BLE sketch.
 
 The Wi-Fi sketch hosts a browser console in AP+STA mode and accepts OTA
 uploads during startup. [Wi-Fi setup and OTA](wifi/MAZESOLVER_WIFI/README.md)
-The [Nicla Vision](vision/NiclaVision/README.md) reports both Φ/Ψ/Ω letters and
-cognitive rings over UART1. Load the OpenMV script before testing the link.
-The maze sketches report detections to their consoles.
+The [Nicla Vision guide](vision/NiclaVision/README.md) has the camera-only
+script for checking Φ/Ψ/Ω letters and cognitive rings in OpenMV. The separate
+UART script sends detections over UART1 to the ESP32 consoles.
 
 To calibrate wheel travel independently of the maze behavior, use the
 [AS5600 distance move test](tests/Encoder_Distance_Test/README.md). It moves a
