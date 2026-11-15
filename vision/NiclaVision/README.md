@@ -40,6 +40,7 @@ or from the browser console.
 
 | Output | What to check |
 | --- | --- |
+| `Camera UART: ... bytes received, ... packets accepted since boot.` | A running Nicla should make both counts rise. Check D1/TX, GPIO16 and ground if the byte count stays flat. If only the byte count rises, check the baud rate and packet format. |
 | `Camera ring: linked, no target.` or `Camera PSO: linked, no target.` | The UART works. Present the corresponding target and send `camera` again. |
 | `COGNITIVE: HARMED`, `STABLE`, or `UNHARMED` | Check the color classification and the five sample markers in the preview. |
 | `PSO: PHI`, `PSI`, or `OMEGA` | Check the letter in the preview. |

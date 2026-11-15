@@ -11,7 +11,7 @@ class NiclaVisionReader {
     int available = input.available();
     if (now - lastPoll_ > timeoutMs_) {
       // A turn can leave old detections queued. Wait for the next fresh frame.
-      while (available-- > 0) input.read();
+      while (available-- > 0 && input.read() >= 0) ++receivedBytes_;
       length_ = 0;
       discardLine_ = false;
       lastPoll_ = now;
@@ -22,6 +22,7 @@ class NiclaVisionReader {
     while (available-- > 0) {
       const int byte = input.read();
       if (byte < 0) break;
+      ++receivedBytes_;
       if (byte == '\r') continue;
       if (byte == '\n') {
         if (!discardLine_ && length_ != 0) {
@@ -45,6 +46,8 @@ class NiclaVisionReader {
   }
 
   void printStatus(Print &output) const {
+    output.printf("Camera UART: %lu bytes received, %lu packets accepted since boot.\n",
+                  receivedBytes_, acceptedPackets_);
     if (!fresh(ring_) && !fresh(letter_)) {
       output.println("Camera: no recent Nicla packet. Check power, UART and ground.");
       return;
@@ -71,6 +74,8 @@ class NiclaVisionReader {
 
   Target ring_;
   Target letter_;
+  unsigned long receivedBytes_ = 0;
+  unsigned long acceptedPackets_ = 0;
   unsigned long lastPoll_ = 0;
   char line_[32];
   size_t length_ = 0;
@@ -125,6 +130,7 @@ class NiclaVisionReader {
     target.y = y;
     target.lastPacket = now;
     target.received = true;
+    ++acceptedPackets_;
     if (type < 0 && target.frames == confirmFrames_) target.reportedType = -1;
   }
 

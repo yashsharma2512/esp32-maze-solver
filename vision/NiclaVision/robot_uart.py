@@ -179,6 +179,29 @@ class TargetReporter:
         return "%d,%d,%d,%d\n" % (target_type, age, x, y)
 
 
+def open_range_sensor():
+    try:
+        from machine import I2C
+        from vl53l1x import VL53L1X
+
+        return VL53L1X(I2C(2))
+    except (ImportError, OSError, RuntimeError) as error:
+        print("COGNITIVE: ToF unavailable", error)
+        return None
+
+
+def read_ring_distance(tof):
+    if tof is None:
+        return None
+    try:
+        distance = tof.read()
+    except OSError:
+        return None
+    if distance is None or distance <= 0:
+        return None
+    return distance
+
+
 def ring_color(img, x, y):
     # Average the same 3×3 section and use the RGB percentages from ring.py.
     r = g = b = 0
@@ -296,14 +319,17 @@ def detect_letters(img, preview):
     return result, primary
 
 
-ring_reporter = TargetReporter(NO_RING)
-letter_reporter = TargetReporter(NO_LETTER)
+tof = open_range_sensor()
+print("COGNITIVE: sampling from measured blob width")
 ring_search = camera.snapshot().copy(x_scale=RING_SEARCH_SCALE, y_scale=RING_SEARCH_SCALE)
 gray_buffer = None
 last_log = time.ticks_ms()
+
+ring_reporter = TargetReporter(NO_RING)
+letter_reporter = TargetReporter(NO_LETTER)
 uart = open_camera_uart()
 if uart is not None:
-    print("Nicla: PSO and cognitive ready on UART9 at 115200")
+    print("Nicla: sending PSO and cognitive results on UART9 at 115200")
 
 while True:
     clock.tick()
@@ -313,6 +339,7 @@ while True:
     # Read ring colors first, while the frame is still RGB.
     rgb = camera.snapshot()
     rings = find_ring_candidates(rgb, ring_search)
+    distance = read_ring_distance(tof) if report else None
 
     if rings:
         # Keep the live RGB preview and reuse a grayscale buffer for PSO.
@@ -333,9 +360,9 @@ while True:
     for rect, _ in rings:
         img.draw_rectangle(rect, color=0, fill=True)
     result, primary_letter = detect_letters(img, preview)
-
     primary_ring = None
     largest_ring_area = 0
+
     for rect, reading in rings:
         colors, points, sample_y = reading
         score = sum(RING_VALUES[color] for color in colors)
@@ -351,13 +378,20 @@ while True:
             preview.draw_circle((cx, cy, 4), color=(0, 0, 0), thickness=2)
             preview.draw_circle((cx, cy, 3), color=(255, 255, 255), thickness=1)
 
-        x, y, w, h = rect
+        x, y = rect[:2]
+        w, h = rect[2:]
         if score in RING_IDS and w * h > largest_ring_area:
             largest_ring_area = w * h
             primary_ring = RING_IDS[score], x + w // 2, y + h // 2
         preview.draw_rectangle(rect, thickness=2)
         preview.draw_string((x, max(0, y - 18)), status, scale=2)
 
+    if report:
+        tof_status = distance if distance is not None else "NO VALID RANGE"
+        print("RESULT:", result, "| FPS:", clock.fps(), "| ToF mm:", tof_status)
+        last_log = now
+
+    # Send the finished frame's results after drawing and OpenMV diagnostics.
     if uart is not None:
         packets = ring_reporter.packet(primary_ring, now) + letter_reporter.packet(primary_letter, now)
         try:
@@ -365,7 +399,3 @@ while True:
         except OSError as error:
             print("Nicla UART write failed. Camera preview will continue:", error)
             uart = None
-
-    if report:
-        print("RESULT:", result, "| FPS:", clock.fps())
-        last_log = now
