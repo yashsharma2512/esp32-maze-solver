@@ -34,6 +34,11 @@ float rightTurnSense = 9;
 #define DR 4 // Diagonal facing right side
 constexpr uint8_t COLOR_CH = 7;  // Bottom-facing APDS9960 on the TCA9548A.
 constexpr float FLOOR_COLOR_MATCH_TOLERANCE = 0.30f;
+// Nicla Vision TX -> LOLIN S2 Mini GPIO12 (UART1 RX); shared ground required.
+// GPIO14 is reserved for UART1 TX if a return link is added later.
+constexpr int NICLA_RX_PIN = 12;
+constexpr int NICLA_TX_PIN = 14;
+constexpr int DROPPER_PIN = 2;  // Servo signal, kept separate from motor and sensor pins.
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////
@@ -61,6 +66,7 @@ constexpr float FLOOR_COLOR_MATCH_TOLERANCE = 0.30f;
 #define LMF 18   // Right motor forward
 #define LMR 34   // Right motor reverse
 #define PWML 21  // PWM channel right
+#define STBY 33  // Motor driver standby
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////

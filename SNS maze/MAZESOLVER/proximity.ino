@@ -111,14 +111,14 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
   while ((millis() - _curr) < ms) {
     mpu.update();
     updateProximitySensors();
-    readSerial();
-    interpretSerial();
+    serviceCameraTargets();
   }
 }
 
 void waitForUserInput1() {
   while (1) {
     pollColorCalibrationStart();
+    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
     if (dl > 150)
@@ -135,20 +135,22 @@ void waitForUserInput2() {
   int __arr[] = { LED13, LEFTLED, RIGHTLED, LEFTLED };
   int _logic[] = { HIGH, LOW, LOW, LOW };
   for (int i = 0; i < 4; i++) {
-    pinMode(__arr[i], OUTPUT);  // Set LED pins as outputs
+    if (__arr[i] >= 0) pinMode(__arr[i], OUTPUT);
   }
   int i = 0;
   while (1) {
+    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
     if (dr > 150)
       break;
-    digitalWrite(__arr[i], _logic[i]);
+    if (__arr[i] >= 0) digitalWrite(__arr[i], _logic[i]);
     delay(80);
-    digitalWrite(__arr[i], !_logic[i]);
+    if (__arr[i] >= 0) digitalWrite(__arr[i], !_logic[i]);
     i = (i + 1) % 4;
   }
   while (dr > 200) {
+    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
   }

@@ -2,15 +2,15 @@
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;
-
-// Standby
-#define STBY 33
+NiclaVisionReader niclaVision;
+NiclaTargetPixels targetPixels;
+RescueSequence rescueSequence;
 
 void setup() {
   /* Initialize Serial module */
   SerialDebug.begin(115200);
 
-  Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
+  Serial1.begin(115200, SERIAL_8N1, NICLA_RX_PIN, NICLA_TX_PIN);
   // SerialUSB.begin(115200);
 
   pinMode(STBY, OUTPUT);
@@ -28,11 +28,10 @@ void setup() {
   initRGB();
 
   /* Set pin 7, 13 as output */
-  pinMode(BUZZPIN, OUTPUT);
-  pinMode(LED13, OUTPUT);
-
-  pinMode(LEFTLED, OUTPUT);
-  pinMode(RIGHTLED, OUTPUT);
+  if (BUZZPIN >= 0) pinMode(BUZZPIN, OUTPUT);
+  if (LED13 >= 0) pinMode(LED13, OUTPUT);
+  if (LEFTLED >= 0) pinMode(LEFTLED, OUTPUT);
+  if (RIGHTLED >= 0) pinMode(RIGHTLED, OUTPUT);
 
   pinMode(enc1, INPUT_PULLUP);
   pinMode(enc2, INPUT_PULLUP);
@@ -129,7 +128,7 @@ void setup() {
     updateProximitySensors();
     moveStraightAligned();
     
-    victimDetection();
+    serviceRescueTarget();
   }
 
   digitalWrite(STBY, HIGH);
@@ -150,8 +149,8 @@ void setup() {
   /* indicate finish state by blinking both leds continously. */
   while (1) {
     state = !state;
-    digitalWrite(LEFTLED, state);
-    digitalWrite(RIGHTLED, state);
+    if (LEFTLED >= 0) digitalWrite(LEFTLED, state);
+    if (RIGHTLED >= 0) digitalWrite(RIGHTLED, state);
     delay(400);
   }
 }

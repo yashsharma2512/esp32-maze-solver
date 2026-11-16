@@ -59,6 +59,7 @@ void printColorHelp() {
   SerialDebug.println("  delete black  Remove one saved reference.");
   SerialDebug.println("  exit        Return to the hand-gesture startup.");
   SerialDebug.println("  help        Show these commands.");
+  SerialDebug.println("  camera      Show Nicla UART and target status.");
 }
 
 void beginColorCalibration() {
@@ -222,6 +223,9 @@ void runColorCommand(char *line) {
     printColorHelp();
   } else if (!name && strcmp(command, "read") == 0) {
     matchColorReference();
+  } else if (!name && strcmp(command, "camera") == 0) {
+    niclaVision.poll(Serial1);
+    niclaVision.printStatus(SerialDebug);
   } else if (!colorStorageReady) {
     SerialDebug.println("COLOR ERROR: EEPROM unavailable. Send exit, then c to retry.");
   } else if (!name && strcmp(command, "list") == 0) {
@@ -244,6 +248,7 @@ void readColorCommands() {
   size_t length = 0;
   bool tooLong = false;
   while (colorCalibrationActive) {
+    serviceCameraTargets();
     const int key = SerialDebug.read();
     if (key < 0) {
       delay(1);
@@ -271,22 +276,29 @@ void runColorCalibration() {
 
 // Accept the existing calibration command while waiting for the first hand gesture.
 void pollColorCalibrationStart() {
+  static char command[8];
   static uint8_t length = 0;
-  static bool calibrate = false;
+  static bool tooLong = false;
   while (SerialDebug.available()) {
     const int key = SerialDebug.read();
     if (key == '\r' || key == '\n') {
-      const bool enter = length == 1 && calibrate;
+      command[length] = '\0';
+      const bool enter = !tooLong && (strcmp(command, "c") == 0 || strcmp(command, "C") == 0);
+      const bool camera = !tooLong && strcmp(command, "camera") == 0;
       length = 0;
+      tooLong = false;
       if (enter) {
         runColorCalibration();
         return;
       }
-    } else if (length == 0) {
-      calibrate = key == 'c' || key == 'C';
-      length = 1;
+      if (camera) {
+        niclaVision.poll(Serial1);
+        niclaVision.printStatus(SerialDebug);
+      }
+    } else if (length + 1 < sizeof(command)) {
+      command[length++] = char(key);
     } else {
-      length = 2;
+      tooLong = true;
     }
   }
 }

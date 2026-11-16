@@ -67,6 +67,7 @@ void frontWallAlign() {
   while (true) {
     mpu.update();
     updateProximitySensors();
+    serviceCameraTargets();
     if ((millis() - timer) > 10) {
       int error = (fl_filtered - fr_filtered) - (LEFTWALLOFFSET - RIGHTWALLOFFSET);  // CALCULATE
       if (abs(error) <= 1 and !enableExitTimer) {
@@ -113,6 +114,7 @@ void turnBot(int degrees, int direction, int _curve) {
   while (true) {
     mpu.update();
     updateProximitySensors();
+    serviceCameraTargets();
     if ((millis() - timer) > 10) {
       int error = abs(degrees) - abs(mpu.getAngleZ());
       if (error <= 0 and !enableExitTimer) {
@@ -267,7 +269,9 @@ bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redire
   while (1) {
     mpu.update();
     updateProximitySensors();
+    serviceCameraTargets();
     if (direction > 0 && handleFloorColor()) return false;
+    if (direction > 0) serviceRescueTarget();
     float lft = abs(encLeft.getAngle());
     float rht = abs(encRight.getAngle());
     float err = requiredDegrees - (lft + rht) / 2;// add gyro assist

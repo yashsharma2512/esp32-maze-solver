@@ -25,15 +25,15 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 // Servo dropper;
 #define dropperAngle 85
 
-#define RX_PIN 12
-#define TX_PIN 14
-
 /////////////////////////////////////////////////////////////////////////////////
 // select config file for the board in use //////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////
 // #include "config/config_pico.h"
 // #include "config/config_rdplite_v3.h"
 #include "config/config_lolins2.h"
+#include "src/NiclaVision/NiclaVision.h"
+#include "src/NiclaVision/TargetPixels.h"
+#include "src/NiclaVision/RescueSequence.h"
 /////////////////////////////////////////////////////////////////////////////////
 
 unsigned long _tick = 0;
@@ -41,23 +41,6 @@ unsigned long _tick = 0;
 bool state = false;
 
 #define SerialDebug Serial
-
-String inputString = "";      // a String to hold incoming data
-bool stringComplete = false;  // whether the string is complete
-
-
-// =========================================================
-// VICTIM HANDLING
-// =========================================================
-
-int victimType;
-unsigned long elapsedTime;
-int victimX;
-int victimY;
-
-bool victimProcessing = false;
-
-String victimStatus;
 
 MPU6050 mpu(Wire);
 
@@ -125,13 +108,13 @@ MagneticEncoder encRight(6, false);
 
 void alterLEDstate() {
   state = !state;
-  digitalWrite(LED13, state);
+  if (LED13 >= 0) digitalWrite(LED13, state);
 }
 
 void _beep() {
-  digitalWrite(BUZZPIN, HIGH);
+  if (BUZZPIN >= 0) digitalWrite(BUZZPIN, HIGH);
   delay(40);
-  digitalWrite(BUZZPIN, LOW);
+  if (BUZZPIN >= 0) digitalWrite(BUZZPIN, LOW);
 }
 
 float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {

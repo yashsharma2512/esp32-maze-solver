@@ -66,7 +66,7 @@ void wallFollow(int wallToFollow) {
   //   readSerial();
   //   interpretSerial();
   // }
-  victimDetection();
+  if (serviceRescueTarget()) return;
 
   //IR
   // interpretIR(false);
