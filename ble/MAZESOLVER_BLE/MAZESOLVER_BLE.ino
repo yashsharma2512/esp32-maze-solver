@@ -1,5 +1,5 @@
 #include "header.h"
-#include "../../vision/NiclaVision/RescueSequence.h"
+#include "src/NiclaVision/RescueSequence.h"
 
 bool IR_CALIBRATE = false;
 bool AI_ENABLE = true;

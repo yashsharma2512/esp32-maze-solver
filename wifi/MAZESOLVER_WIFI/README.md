@@ -4,6 +4,9 @@ Open [MAZESOLVER_WIFI.ino](MAZESOLVER_WIFI.ino) in Arduino IDE and select
 **ESP32 Dev Module**. Install **Adafruit NeoPixel**, **MPU6050_light**,
 **Adafruit AS7341**, and **Adafruit BusIO**. Use the same `resetAngleZ()`
 helper in `MPU6050_light.h` as the regular maze sketch.
+Keep the sketch's `src/NiclaVision` folder beside the `.ino` file; it contains
+the headers needed to compile this sketch in Arduino IDE. Reopen the sketch
+after updating its folder so Arduino IDE sees the new files.
 
 ## Connect to the browser console
 

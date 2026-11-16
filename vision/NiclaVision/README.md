@@ -5,6 +5,11 @@ the working camera script. It places the five sample points using the detected
 ring width. The ToF reading is printed for debugging. Run
 [robot_uart.py](robot_uart.py) when testing the ESP32 UART link.
 
+The ESP32 C++ headers in this directory are the shared source. Each ESP32
+sketch carries a copy in its own `src/NiclaVision` folder so Arduino IDE can
+compile that sketch when opened on its own. Update those copies when changing
+the shared headers.
+
 ## 1. Wire the camera
 
 Power both boards over USB for the first test. The UART script uses the Nicla's
