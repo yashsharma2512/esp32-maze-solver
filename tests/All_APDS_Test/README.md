@@ -13,7 +13,7 @@ proximity values for all three APDS sensors:
 
 The ESP32 I2C pins are GPIO21 SDA and GPIO22 SCL. The TCA address is `0x70`;
 each APDS uses `0x39` behind its own mux channel. Gain is **2×**, and the
-filter coefficient is **0.65**, matching the current maze firmware. The
+filter coefficient is **0.65**, matching the USB firmware and BLE sketch. The Wi-Fi and tuning sketches currently use 1×. Change `APDS_GAIN` in this test to 1 before comparing against those sketches. The
 sketch uses the same APDS register settings as `proximity.ino`.
 
 At startup, each sensor should print an APDS ID and `ready`. Move a hand or

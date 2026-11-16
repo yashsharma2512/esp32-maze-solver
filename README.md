@@ -1,5 +1,8 @@
 # ESP32 Maze Solver
 
+Start with the [code guide](CODE_GUIDE.md) to choose a sketch, follow the
+program flow, and find the sensor and movement tests.
+
 Open [MAZESOLVER.ino](firmware/MAZESOLVER/MAZESOLVER.ino) in Arduino IDE and
 select **ESP32 Dev Module** for the 38-pin ESP32. Keep the whole sketch
 folder together so Arduino IDE can compile all the tabs.
