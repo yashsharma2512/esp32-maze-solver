@@ -303,12 +303,15 @@ bool interpretClicks() {
   moveMotor(-150, -150);
   delayWithSensorUpdate(200);
 
-  // Pivot away from the pressed side. If both are pressed, favor the left wall.
-  if (rightPressed && !leftPressed) moveMotor(0, 150);
-  else moveMotor(150, 0);
-  delayWithSensorUpdate(100);
+  // Original two-part correction. If both are pressed, use the left response.
+  if (rightPressed && !leftPressed) moveMotor(0, 255);
+  else moveMotor(255, 0);
+  delayWithSensorUpdate(130);
+  if (rightPressed && !leftPressed) moveMotor(255, 0);
+  else moveMotor(0, 255);
+  delayWithSensorUpdate(130);
   moveMotor(0, 0);
-  delayWithSensorUpdate(50);
+  delayWithSensorUpdate(20);
   updateWalls(false);
   return true;
 }
