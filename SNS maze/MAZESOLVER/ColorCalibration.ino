@@ -248,7 +248,8 @@ void readColorCommands() {
   size_t length = 0;
   bool tooLong = false;
   while (colorCalibrationActive) {
-    serviceCameraTargets();
+    // Keep the UART current without unsolicited target logs during calibration.
+    niclaVision.poll(Serial1);
     const int key = SerialDebug.read();
     if (key < 0) {
       delay(1);
