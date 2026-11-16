@@ -282,7 +282,7 @@ bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redire
     err = err * 1.9;
     int gyroerror = mpu.getAngleZ() * kp_gyroAssist;
     float drive = constrain(err, 60, 125);
-    interpretClicks();
+    if (interpretClicks()) return false;
     if ((fl + fr) / 2 > FRONT_WALL_THRESHOLD) break;
     moveMotor(drive * direction + gyroerror, drive * direction -gyroerror);
     if ((lft + rht) / 2 > requiredDegrees) break;
@@ -292,30 +292,23 @@ bool MoveStrightToDistance(float distance_mm) {  // False if a black tile redire
   return !motorStopRequested();
 }
 
-void interpretClicks() {
-  if (!digitalRead(LEFTCLICK)) {
-    moveMotor(0, 0);
-    delayWithSensorUpdate(50);
-    moveMotor(-150, -150);
-    delayWithSensorUpdate(200);
-    moveMotor(255, 0);
-    delayWithSensorUpdate(130);
-    moveMotor(0, 255);
-    delayWithSensorUpdate(130);
-    moveMotor(0, 0);
-    delayWithSensorUpdate(20);
-  }
+bool interpretClicks() {
+  const bool leftPressed = !digitalRead(LEFTCLICK);
+  const bool rightPressed = !digitalRead(RIGHTCLICK);
+  if (!leftPressed && !rightPressed) return false;
 
-  if (!digitalRead(RIGHTCLICK)) {
-    moveMotor(0, 0);
-    delayWithSensorUpdate(50);
-    moveMotor(-150, -150);
-    delayWithSensorUpdate(200);
-    moveMotor(0, 255);
-    delayWithSensorUpdate(130);
-    moveMotor(255, 0);
-    delayWithSensorUpdate(130);
-    moveMotor(0, 0);
-    delayWithSensorUpdate(20);
-  }
+  moveMotor(0, 0);
+  SerialDebug.printf("CLICK: left=%d right=%d\n", leftPressed, rightPressed);
+  delayWithSensorUpdate(50);
+  moveMotor(-150, -150);
+  delayWithSensorUpdate(300);
+
+  // Pivot away from the pressed side. If both are pressed, favor the left wall.
+  if (rightPressed && !leftPressed) moveMotor(0, 200);
+  else moveMotor(200, 0);
+  delayWithSensorUpdate(200);
+  moveMotor(0, 0);
+  delayWithSensorUpdate(50);
+  updateWalls(false);
+  return true;
 }

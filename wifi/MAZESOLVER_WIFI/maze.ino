@@ -82,7 +82,7 @@ void wallFollow(int wallToFollow) {
 
     moveStraightAligned();
 
-    interpretClicks();
+    if (interpretClicks()) return;
 
     if (_turn != 0) {
       if (_turn == -1 and wallToFollow == LEFT)
