@@ -122,6 +122,7 @@ void setup() {
   digitalWrite(STBY, HIGH);
   Serial1.begin(115200, SERIAL_8N1, NICLA_RX_PIN, NICLA_TX_PIN);
   cameraArmed = true;
+  SerialDebug.printf("NICLA: UART1 RX on GPIO%d active.\n", NICLA_RX_PIN);
 
   while (0) {
     mpu.update();
