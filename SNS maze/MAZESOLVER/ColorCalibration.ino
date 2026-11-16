@@ -59,7 +59,6 @@ void printColorHelp() {
   SerialDebug.println("  delete black  Remove one saved reference.");
   SerialDebug.println("  exit        Return to the hand-gesture startup.");
   SerialDebug.println("  help        Show these commands.");
-  SerialDebug.println("  camera      Show Nicla UART and target status.");
 }
 
 void beginColorCalibration() {
@@ -223,9 +222,6 @@ void runColorCommand(char *line) {
     printColorHelp();
   } else if (!name && strcmp(command, "read") == 0) {
     matchColorReference();
-  } else if (!name && strcmp(command, "camera") == 0) {
-    niclaVision.poll(Serial1);
-    niclaVision.printStatus(SerialDebug);
   } else if (!colorStorageReady) {
     SerialDebug.println("COLOR ERROR: EEPROM unavailable. Send exit, then c to retry.");
   } else if (!name && strcmp(command, "list") == 0) {
@@ -248,8 +244,6 @@ void readColorCommands() {
   size_t length = 0;
   bool tooLong = false;
   while (colorCalibrationActive) {
-    // Keep the UART current without unsolicited target logs during calibration.
-    niclaVision.poll(Serial1);
     const int key = SerialDebug.read();
     if (key < 0) {
       delay(1);
@@ -285,16 +279,11 @@ void pollColorCalibrationStart() {
     if (key == '\r' || key == '\n') {
       command[length] = '\0';
       const bool enter = !tooLong && (strcmp(command, "c") == 0 || strcmp(command, "C") == 0);
-      const bool camera = !tooLong && strcmp(command, "camera") == 0;
       length = 0;
       tooLong = false;
       if (enter) {
         runColorCalibration();
         return;
-      }
-      if (camera) {
-        niclaVision.poll(Serial1);
-        niclaVision.printStatus(SerialDebug);
       }
     } else if (length + 1 < sizeof(command)) {
       command[length++] = char(key);
