@@ -118,7 +118,6 @@ void delayWithSensorUpdate(int ms) {  // only in multiples of 5
 void waitForUserInput1() {
   while (1) {
     pollColorCalibrationStart();
-    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
     if (dl > 150)
@@ -139,7 +138,6 @@ void waitForUserInput2() {
   }
   int i = 0;
   while (1) {
-    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
     if (dr > 150)
@@ -150,7 +148,6 @@ void waitForUserInput2() {
     i = (i + 1) % 4;
   }
   while (dr > 200) {
-    serviceCameraTargets();
     updateProximitySensors();
     mpu.update();
   }
