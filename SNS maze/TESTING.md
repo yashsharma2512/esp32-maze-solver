@@ -22,7 +22,9 @@ right APDS sensor. The LOLIN starts camera UART after `START2` and prints
 `NICLA: UART1 RX on GPIO12 active.`
 
 The maze drive starts after arming, so keep the wheels clear of the table.
-The `camera` Serial command is not available in this SNS sketch.
+After `START2`, send `camera` with a newline to show the received byte
+and accepted packet counts. The sketch also prints that status once about
+a second after arming. It does not read camera packets before arming.
 
 ## 3. Present targets
 
