@@ -33,6 +33,9 @@ hand gesture and motor arming. Camera detections are inactive during startup
 and floor-color calibration. The OpenMV console prints `Nicla SNS UART4 TX
 bytes` as it transmits. If that count rises but the LOLIN receives no data
 after `START2`, check the ESLOV SDA-to-GPIO12 wire and common ground.
+After arming, send `camera` with a newline over LOLIN USB Serial to see
+received byte and accepted packet counts. The sketch also prints this status
+once about a second after arming.
 
 ## APDS9960 wiring
 
