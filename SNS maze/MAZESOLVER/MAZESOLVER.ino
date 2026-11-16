@@ -5,13 +5,11 @@ bool AI_ENABLE = true;
 NiclaVisionReader niclaVision;
 NiclaTargetPixels targetPixels;
 RescueSequence rescueSequence;
+bool cameraArmed = false;
 
 void setup() {
   /* Initialize Serial module */
   SerialDebug.begin(115200);
-
-  Serial1.begin(115200, SERIAL_8N1, NICLA_RX_PIN, NICLA_TX_PIN);
-  // SerialUSB.begin(115200);
 
   pinMode(STBY, OUTPUT);
   digitalWrite(STBY, LOW);
@@ -122,6 +120,8 @@ void setup() {
 
   SerialDebug.println("Start");
   digitalWrite(STBY, HIGH);
+  Serial1.begin(115200, SERIAL_8N1, NICLA_RX_PIN, NICLA_TX_PIN);
+  cameraArmed = true;
 
   while (0) {
     mpu.update();
