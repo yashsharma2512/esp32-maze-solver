@@ -24,8 +24,9 @@ two kits for harmed/Phi, one for stable/Psi, and none for unharmed/Omega.
 It waits for a confirmed clear scene before handling another encounter.
 Set `DROPPER_HOME_DEG` and `DROPPER_RELEASE_DEG` in
 `src/NiclaVision/DropperConfig.h` after checking the actual mechanism.
-At the startup prompt or in color calibration, send `camera` with a newline
-to check UART packets and current target status.
+The sketch starts UART1 and processes Nicla packets only after the second
+hand gesture and motor arming. Camera detections are inactive during startup
+and floor-color calibration.
 
 ## APDS9960 wiring
 
