@@ -18,7 +18,7 @@ constexpr int TURN_BACKUP_MM = 30;
 
 const float alpha = 0.65; // Smoothing factor (range 0 - 1) (value directly proportional to smoothness)
 
-constexpr uint8_t APDS_PROXIMITY_GAIN = 2; // 1, 2, 4, or 8 times; applies to all APDS sensors
+constexpr uint8_t APDS_PROXIMITY_GAIN = 1; // 1, 2, 4, or 8 times; applies to all APDS sensors
 static_assert(APDS_PROXIMITY_GAIN == 1 || APDS_PROXIMITY_GAIN == 2 ||
               APDS_PROXIMITY_GAIN == 4 || APDS_PROXIMITY_GAIN == 8,
               "APDS proximity gain must be 1, 2, 4, or 8.");
