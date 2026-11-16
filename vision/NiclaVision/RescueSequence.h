@@ -30,7 +30,11 @@ class RescueSequence {
 
     const int kitCount = kitsFor(target);
     log.printf("RESCUE: %s | kits requested: %d\n", NiclaVisionReader::name(target), kitCount);
-    if (kitCount > 0) dispense(kitCount, log);
+    if (kitCount > 0) {
+      dispense(kitCount, log);
+    } else {
+      delayWithSensorUpdate(200);  // Give the motors time to stop for a zero-kit target.
+    }
     active_ = false;
     return true;
   }

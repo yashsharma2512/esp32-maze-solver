@@ -49,8 +49,8 @@ class NiclaVisionReader {
   int confirmedLetter() const { return confirmedType(letter_); }
 
   int rescueTarget() const {
-    const int ring = readyForRescue(ring_);
-    return ring >= 0 ? ring : readyForRescue(letter_);
+    const int ring = confirmedRing();
+    return ring >= 0 ? ring : confirmedLetter();
   }
 
   bool targetsCleared() const { return cleared(ring_) && cleared(letter_); }
@@ -97,11 +97,6 @@ class NiclaVisionReader {
 
   static int confirmedType(const Target &target) {
     return target.type >= 0 && target.frames >= confirmFrames_ && fresh(target) ? target.type : -1;
-  }
-
-  static int readyForRescue(const Target &target) {
-    // The original approach routine used x > 70 and a half-second stable target.
-    return target.x > 70 && target.age >= 500 ? confirmedType(target) : -1;
   }
 
   static bool cleared(const Target &target) {
@@ -165,8 +160,9 @@ class NiclaVisionReader {
       output.printf("%s: linked, no target.\n", label);
       return;
     }
-    output.printf("%s: %s | x=%d y=%d | stable %lu ms\n",
-                  label, name(target.type), target.x, target.y, target.age);
+    output.printf("%s: %s | x=%d y=%d | stable %lu ms | frames %u/%u\n",
+                  label, name(target.type), target.x, target.y, target.age,
+                  unsigned(target.frames), unsigned(confirmFrames_));
   }
 
   static void report(Target &target, const char *label, Print &output) {

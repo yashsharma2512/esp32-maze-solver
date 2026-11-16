@@ -69,13 +69,12 @@ prompt for a bench test.
 
 ## 5. Set up the rescue dropper
 
-During forward driving, the robot stops when a confirmed target has been
-visible for at least 500 ms and its reported x-position is greater than 70.
-Both NeoPixels then show the target's color while the dropper cycles. The
-robot resumes its maze run after the sequence. A manual `stop` interrupts
-dispensing. Both camera streams must report a clear scene before another
-target can trigger the sequence. The x-position is an image coordinate, so
-check the actual kit landing distance on the course.
+During forward driving, three matching camera frames trigger a rescue anywhere
+in the camera's detection area. The robot stops and both NeoPixels show the
+target's color. The console prints `RESCUE` with the requested kit count and a
+`DROPPER` message after each servo cycle. For a zero-kit target the robot pauses
+briefly before resuming. A manual `stop` interrupts dispensing. Both camera
+streams must report a clear scene before another target can trigger a rescue.
 
 | Target | Kits |
 | --- | ---: |
