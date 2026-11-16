@@ -301,12 +301,12 @@ bool interpretClicks() {
   SerialDebug.printf("CLICK: left=%d right=%d\n", leftPressed, rightPressed);
   delayWithSensorUpdate(50);
   moveMotor(-150, -150);
-  delayWithSensorUpdate(300);
+  delayWithSensorUpdate(200);
 
   // Pivot away from the pressed side. If both are pressed, favor the left wall.
-  if (rightPressed && !leftPressed) moveMotor(0, 200);
-  else moveMotor(200, 0);
-  delayWithSensorUpdate(200);
+  if (rightPressed && !leftPressed) moveMotor(0, 150);
+  else moveMotor(150, 0);
+  delayWithSensorUpdate(100);
   moveMotor(0, 0);
   delayWithSensorUpdate(50);
   updateWalls(false);
