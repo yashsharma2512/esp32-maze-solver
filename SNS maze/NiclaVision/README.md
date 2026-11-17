@@ -1,5 +1,8 @@
 # SNS maze Nicla Vision
 
+For the full two-board wiring and upload sequence, see the
+[SNS maze guide](../GUIDE.md).
+
 This Nicla script is specific to the SNS maze wiring. The WiFi sketch's
 `vision/NiclaVision/robot_uart.py` remains separate.
 

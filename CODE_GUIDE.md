@@ -10,7 +10,7 @@ in Arduino IDE. Uploading a sketch replaces the program currently on that board.
 | [wifi/MAZESOLVER_WIFI](wifi/MAZESOLVER_WIFI/README.md) | ESP32 Dev Module, `MAZESOLVER_WIFI.ino` | Full maze run with browser console, startup OTA and floor actions. |
 | [ble/MAZESOLVER_BLE](ble/MAZESOLVER_BLE/README.md) | ESP32 Dev Module, `MAZESOLVER_BLE.ino` | Full maze run with BLE console and floor actions. |
 | [tuning/MAZESOLVER_TUNING](tuning/MAZESOLVER_TUNING/README.md) | ESP32 Dev Module, `MAZESOLVER_TUNING.ino` | Four selectable stages for isolating movement. |
-| [SNS maze/MAZESOLVER](SNS%20maze/MAZESOLVER/README.md) | LOLIN S2 Mini, `MAZESOLVER.ino` | SNS robot with different pins, APDS floor sensor and Nicla link. |
+| [SNS maze](SNS%20maze/GUIDE.md) | LOLIN S2 Mini, `MAZESOLVER.ino` | SNS robot with different pins, APDS floor sensor and Nicla link. |
 
 The ESP32 Wi-Fi and tuning sketches currently use APDS proximity gain 1×.
 The USB firmware and BLE sketch use 2×. Each sketch has its own config and

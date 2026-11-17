@@ -1,5 +1,7 @@
 # SNS maze
 
+Start with the [complete SNS wiring and run guide](../GUIDE.md).
+
 Open `MAZESOLVER.ino` in Arduino IDE with the entire `MAZESOLVER` folder intact.
 Select **LOLIN S2 Mini** and use **Adafruit NeoPixel** and **MPU6050_light**.
 The original sketch calls `mpu.resetAngleZ()`. If your library lacks it, add
