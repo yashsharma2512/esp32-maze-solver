@@ -7,7 +7,7 @@ in Arduino IDE. Uploading a sketch replaces the program currently on that board.
 | Folder | Board and entry point | Purpose |
 | --- | --- | --- |
 | [firmware/MAZESOLVER](firmware/MAZESOLVER/README.md) | ESP32 Dev Module, `MAZESOLVER.ino` | Full USB-controlled maze run and floor-color calibration. |
-| [wifi/MAZESOLVER_WIFI](wifi/MAZESOLVER_WIFI/README.md) | ESP32 Dev Module, `MAZESOLVER_WIFI.ino` | Full maze run with browser console, startup OTA and floor actions. |
+| [Heritage maze apac/MAZESOLVER_WIFI](Heritage%20maze%20apac/MAZESOLVER_WIFI/README.md) | ESP32 Dev Module, `MAZESOLVER_WIFI.ino` | Full maze run with browser console, startup OTA and floor actions. |
 | [ble/MAZESOLVER_BLE](ble/MAZESOLVER_BLE/README.md) | ESP32 Dev Module, `MAZESOLVER_BLE.ino` | Full maze run with BLE console and floor actions. |
 | [tuning/MAZESOLVER_TUNING](tuning/MAZESOLVER_TUNING/README.md) | ESP32 Dev Module, `MAZESOLVER_TUNING.ino` | Four selectable stages for isolating movement. |
 | [SNS maze](SNS%20maze/GUIDE.md) | LOLIN S2 Mini, `MAZESOLVER.ino` | SNS robot with different pins, APDS floor sensor and Nicla link. |
@@ -18,10 +18,10 @@ its own `src/NiclaVision` headers. Editing one copy does not update the others.
 
 ## ESP32 Wi-Fi run
 
-1. Open [MAZESOLVER_WIFI.ino](wifi/MAZESOLVER_WIFI/MAZESOLVER_WIFI.ino),
+1. Open [MAZESOLVER_WIFI.ino](Heritage%20maze%20apac/MAZESOLVER_WIFI/MAZESOLVER_WIFI.ino),
    select **ESP32 Dev Module**, and install the libraries listed in its guide.
 2. Check GPIO and TCA channel assignments in
-   [config_esp32_dev.h](wifi/MAZESOLVER_WIFI/config/config_esp32_dev.h).
+   [config_esp32_dev.h](Heritage%20maze%20apac/MAZESOLVER_WIFI/config/config_esp32_dev.h).
    The project README lists the ESP32 wiring. Connect common ground.
 3. Open Serial Monitor at 115200 baud with Newline selected. For a first
    check, raise the wheels. Send `c` at startup to calibrate floor colors,

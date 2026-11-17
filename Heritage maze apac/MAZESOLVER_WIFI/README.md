@@ -1,4 +1,4 @@
-# Maze Solver Wi-Fi
+# Heritage maze apac (Wi-Fi)
 
 Open [MAZESOLVER_WIFI.ino](MAZESOLVER_WIFI.ino) in Arduino IDE and select
 **ESP32 Dev Module**. Install **Adafruit NeoPixel**, **MPU6050_light**,

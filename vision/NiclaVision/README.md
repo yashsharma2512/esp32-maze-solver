@@ -39,7 +39,7 @@ UART initializes or fails. To boot into that mode, save `robot_uart.py` as
 
 Upload your ESP32 sketch and open its console. The USB, BLE and Wi-Fi versions
 show confirmed detections while waiting to start and during a run.
-In the [Wi-Fi sketch](../../wifi/MAZESOLVER_WIFI/README.md), you can also send
+In the [Wi-Fi sketch](../../Heritage%20maze%20apac/MAZESOLVER_WIFI/README.md), you can also send
 `camera` at startup over USB Serial at 115200 baud with Newline selected,
 or from the browser console.
 

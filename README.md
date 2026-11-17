@@ -20,7 +20,7 @@ For BLE serial and the `start` command, open the separate BLE sketch.
 [BLE setup and commands](ble/MAZESOLVER_BLE/README.md)
 
 The Wi-Fi sketch hosts a browser console in AP+STA mode and accepts OTA
-uploads during startup. [Wi-Fi setup and OTA](wifi/MAZESOLVER_WIFI/README.md)
+uploads during startup. [Wi-Fi setup and OTA](Heritage%20maze%20apac/MAZESOLVER_WIFI/README.md)
 The [Nicla Vision guide](vision/NiclaVision/README.md) has the camera-only
 script for checking Φ/Ψ/Ω letters and cognitive rings in OpenMV. The separate
 UART script sends detections over UART1 to the ESP32 consoles.
@@ -78,7 +78,7 @@ Send `reset` to reboot the ESP32 and return to the normal startup sequence.
 The bottom-facing AS7341 is on TCA CH2. Its illumination LED turns on at
 4 mA during setup. Calibrate with the sensor at its normal height above the
 actual course tiles and the robot stopped. Open USB Serial Monitor at
-**115200 baud** with **Newline** selected. The [Wi-Fi sketch](wifi/MAZESOLVER_WIFI/README.md)
+**115200 baud** with **Newline** selected. The [Wi-Fi sketch](Heritage%20maze%20apac/MAZESOLVER_WIFI/README.md)
 also accepts these commands in its browser console; the [BLE sketch](ble/MAZESOLVER_BLE/README.md)
 accepts them over BLE.
 
